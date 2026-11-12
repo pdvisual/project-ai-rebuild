@@ -35,6 +35,8 @@ npm run deploy
 
 Worker использует Static Assets из папки `public` и существующую D1 через binding `DB`.
 
+Workers Builds подключён к `pdvisual/project-ai-rebuild`, ветка `main`; новый коммит в `main` запускает сборку с командой `npx wrangler deploy`.
+
 ## API
 
 - POST `/api/register`
@@ -51,7 +53,7 @@ Worker использует Static Assets из папки `public` и сущес
 
 ## Безопасность и ограничения
 
-- Пароли хешируются PBKDF2-SHA256 с 310 000 итераций и случайной солью.
+- Пароли хешируются PBKDF2-SHA256 с 310 000 итерациями и случайной солью.
 - Сессии используют случайный токен; в D1 хранится только SHA-256 хеш. Cookie: HttpOnly, Secure, SameSite=Lax.
 - Каждый чат проверяется на принадлежность текущему пользователю.
 - DeepSeek API key доступен только Worker.
