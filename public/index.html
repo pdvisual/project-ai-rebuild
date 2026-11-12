@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101114"><title>Project AI</title>
+<link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script>
+</head>
+<body>
+<div id="authScreen" class="auth-screen">
+  <section class="auth-card">
+    <div class="brand auth-brand">Project <span>AI</span></div>
+    <p class="muted">Твой искусственный интеллект</p>
+    <div class="auth-tabs"><button id="loginTab" class="active" type="button">Войти</button><button id="registerTab" type="button">Регистрация</button></div>
+    <form id="authForm">
+      <label class="field"><span>Электронная почта</span><input id="email" type="email" autocomplete="email" placeholder="name@example.com" maxlength="254" required></label>
+      <label class="field"><span>Пароль</span><input id="password" type="password" autocomplete="current-password" placeholder="Минимум 10 символов" minlength="10" maxlength="128" required></label>
+      <button class="primary full" id="authSubmit" type="submit">Войти</button>
+    </form>
+    <p id="authError" class="form-error" role="alert"></p>
+  </section>
+</div>
+<div id="app" class="app hidden">
+  <aside id="sidebar" class="sidebar">
+    <div class="brand">Project <span>AI</span></div>
+    <button id="newChat" class="new-chat">＋ Новый чат</button>
+    <div class="history-heading">ИСТОРИЯ ЧАТОВ</div>
+    <div id="chatList" class="chat-list"></div>
+    <div class="account">
+      <div class="account-email" id="userEmail"></div>
+      <button id="logout" class="ghost full">Выйти из аккаунта</button>
+    </div>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <button id="mobileMenu" class="icon-button" aria-label="Меню">☰</button>
+      <div><div class="mode-heading" id="modeTitle">Apricity 1.2</div><div class="provider-note">Project AI</div></div>
+      <div class="top-status"><i id="healthDot"></i><span id="healthText">Проверка</span></div>
+    </header>
+    <nav class="modes">
+      <button data-mode="force">Force 1.1</button><button data-mode="apricity" class="selected">Apricity 1.2</button><button data-mode="sonder">Sonder 1.3</button>
+    </nav>
+    <section id="messages" class="messages">
+      <div class="welcome"><div class="welcome-icon">✳</div><h1>Чем могу помочь?</h1><p>Выбери режим и начни общение с Project AI.</p></div>
+    </section>
+    <div class="composer-area">
+      <div id="preview" class="preview"></div>
+      <form id="chatForm" class="composer">
+        <textarea id="message" rows="1" maxlength="20000" placeholder="Напиши сообщение..."></textarea>
+        <div class="composer-bottom">
+          <div class="composer-left">
+            <label id="attachLabel" class="attach hidden">＋ Фото<input id="images" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden></label>
+            <span id="limitText" class="limit-text"></span>
+          </div>
+          <button id="send" class="send-button" type="submit">Отправить ↑</button>
+        </div>
+      </form>
+      <p class="disclaimer">Project AI может ошибаться. Проверяй важную информацию.</p>
+    </div>
+  </main>
+</div>
+<div id="toast" class="toast" role="status"></div>
+<dialog id="renameDialog" class="dialog"><form method="dialog" id="renameForm"><h3>Переименовать чат</h3><input id="renameInput" maxlength="100" required><div class="dialog-actions"><button class="ghost" value="cancel">Отмена</button><button class="primary" id="renameSave" value="save">Сохранить</button></div></form></dialog>
+</body></html>
