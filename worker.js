@@ -124,8 +124,7 @@ async function requireUser(request, env) {
 }
 async function listChats(user, env) {
   const { results } = await env.DB.prepare(
-    `SELECT c.id, c.title, c.model, c.created_at, c.updated_at,
-      (SELECT content FROM messages WHERE chat_id=c.id ORDER BY created_at DESC, rowid DESC LIMIT 1) AS last_message
+    `SELECT c.id, c.title, c.model, c.created_at, c.updated_at
      FROM chats c WHERE c.user_id=? ORDER BY c.updated_at DESC LIMIT 100`
   ).bind(user.id).all();
   return results || [];
