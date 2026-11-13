@@ -81,18 +81,17 @@ $("message").addEventListener("input",e=>{e.target.style.height="auto";e.target.
 $("chatForm").onsubmit=async e=>{
  e.preventDefault();if(busy)return;const message=$("message").value.trim();if(!message)return;
  busy=true;document.querySelectorAll("[data-mode]").forEach(b=>b.disabled=true);$("send").disabled=true;$("send").textContent="Думаю...";
- let pending=null;
  $("message").value="";$("message").style.height="auto";
  const requestController=new AbortController();
  const requestTimeout=setTimeout(()=>requestController.abort(),100000);
  try{
-  pending=bubble("Project AI обрабатывает запрос...","assistant");
   const data=await api("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode,message,chatId,memory:settings.memory?settings.notes:"",enabledPlugins:[settings.pluginWebSearch?"web_search":null,settings.pluginCalculator?"calculator":null,settings.pluginGithub?"github":null].filter(Boolean)}),signal:requestController.signal});
-  chatId=data.chatId;const messageNode=pending.querySelector(".message-text");messageNode.replaceChildren();renderLinkedText(messageNode,data.reply);
-  if(Array.isArray(data.sources)&&data.sources.length){const sourceBox=document.createElement("div");sourceBox.className="message-sources";const heading=document.createElement("strong");heading.textContent="Источники";sourceBox.append(heading);data.sources.forEach((source,index)=>{if(!source||typeof source.url!=="string"||!/^https?:\/\//i.test(source.url))return;const link=document.createElement("a");link.href=source.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent=(index+1)+". "+(source.title||source.url);sourceBox.append(link)});if(sourceBox.querySelector("a"))pending.append(sourceBox)}
+  chatId=data.chatId;
+  const answer=bubble(data.reply,"assistant");
+  if(Array.isArray(data.sources)&&data.sources.length){const sourceBox=document.createElement("div");sourceBox.className="message-sources";const heading=document.createElement("strong");heading.textContent="Источники";sourceBox.append(heading);data.sources.forEach((source,index)=>{if(!source||typeof source.url!=="string"||!/^https?:\/\//i.test(source.url))return;const link=document.createElement("a");link.href=source.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent=(index+1)+". "+(source.title||source.url);sourceBox.append(link)});if(sourceBox.querySelector("a"))answer.append(sourceBox)}
   const existing=chats.find(c=>c.id===chatId);if(existing){existing.updated_at=Date.now()/1000}else chats.unshift({id:chatId,title:message.slice(0,80)||"Новый чат",model:mode});
   renderChatList();
- }catch(err){if(!pending)pending=bubble("Не удалось отправить сообщение.","assistant",true);const errorText=err.name==="AbortError"?"Превышено время ожидания ответа (100 секунд). Проверь соединение и попробуй ещё раз.":err.message;pending.querySelector(".message-text").textContent="Ошибка: "+errorText+(err.code?" ["+err.code+"]":"");pending.classList.add("error");toast(errorText+(err.code?" · "+err.code:""))}
+ }catch(err){const errorText=err.name==="AbortError"?"Превышено время ожидания ответа (100 секунд). Проверь соединение и попробуй ещё раз.":err.message;bubble("Ошибка: "+errorText+(err.code?" ["+err.code+"]":""),"assistant",true);toast(errorText+(err.code?" · "+err.code:""))}
  finally{clearTimeout(requestTimeout);busy=false;document.querySelectorAll("[data-mode]").forEach(b=>b.disabled=false);$("send").disabled=false;$("send").textContent="Отправить ↑";$("message").focus()}
 };
 async function health(){try{const data=await api("/api/health");$("healthDot").className=data.serviceConfigured?"ok":"bad";$("healthText").textContent=data.serviceConfigured?"Сервис готов":"Сервис не настроен"}catch{$("healthDot").className="bad";$("healthText").textContent="Нет соединения · PA-001"}}
