@@ -19,13 +19,13 @@ npx wrangler login
 npm run dev
 ```
 
-## Secret DeepSeek
+## Secret Google Gemini
 
 В Cloudflare Dashboard открой Workers & Pages → projectai-rebuild-test → Settings → Variables and Secrets и добавь Secret:
 
-`DEEPSEEK_API_KEY`
+`GEMINI_API_KEY`
 
-Вставляй ключ только в защищённое поле Cloudflare. Не отправляй его в чат и не добавляй в файлы проекта.
+Создай API-ключ в Google AI Studio: https://aistudio.google.com/apikey. В Cloudflare добавь его как Secret `GEMINI_API_KEY`. Вставляй ключ только в защищённое поле Cloudflare. Не отправляй его в чат и не добавляй в файлы проекта.
 
 ## Развёртывание
 
@@ -53,10 +53,10 @@ Workers Builds подключён к `pdvisual/project-ai-rebuild`, ветка `
 
 ## Безопасность и ограничения
 
-- Пароли хешируются PBKDF2-SHA256 с 310 000 итерациями и случайной солью.
+- Пароли хешируются PBKDF2-SHA256 с 100 000 итерациями и случайной солью.
 - Сессии используют случайный токен; в D1 хранится только SHA-256 хеш. Cookie: HttpOnly, Secure, SameSite=Lax.
 - Каждый чат проверяется на принадлежность текущему пользователю.
-- DeepSeek API key доступен только Worker.
+- Gemini API key доступен только Worker.
 - Sonder: 50 успешных запросов пользователя за скользящие 24 часа. Проверка выполняется до вызова модели, событие записывается после успешного ответа и сохранения сообщений. При одновременных запросах возможна небольшая гонка лимита.
 - Sonder принимает до 4 изображений JPEG/PNG/GIF/WebP, до 4 MiB каждое, общий размер до 16 MiB. Сервер также ограничивает размер JSON-тела.
 - Изображения в D1 не сохраняются, поэтому они не появятся повторно при открытии старого диалога.
@@ -64,7 +64,7 @@ Workers Builds подключён к `pdvisual/project-ai-rebuild`, ветка `
 
 ## Проверка после публикации
 
-1. Открой `/api/health`: должны быть `database:true` и `deepseekConfigured:true`.
+1. Открой `/api/health`: должны быть `database:true` и `geminiConfigured:true`.
 2. Зарегистрируй тестовый аккаунт.
 3. Проверь вход и выход.
 4. Отправь сообщение в Apricity, обнови страницу и проверь историю.
