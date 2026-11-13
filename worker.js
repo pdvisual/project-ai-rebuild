@@ -201,12 +201,15 @@ function cleanAssistantFormatting(value) {
     .trim();
 }
 function parseStoredMessage(content) {
-  if (typeof content !== "string" || !content.startsWith("{")) return { text: String(content || ""), images: [], sources: [] };
+  if (typeof content !== "string" || !content.startsWith("{")) return { text: String(content || ""), sources: [] };
   try {
     const parsed = JSON.parse(content);
-    if (parsed && parsed.__pa_message_v1 === true) return { text: typeof parsed.text === "string" ? parsed.text : "", images: Array.isArray(parsed.images) ? parsed.images.filter(x => typeof x === "string" && x.startsWith("data:image/")).slice(0, MAX_IMAGES) : [], sources: Array.isArray(parsed.sources) ? parsed.sources.filter(x => x && typeof x.url === "string" && /^https?:\/\//i.test(x.url)).slice(0, 8) : [] };
+    if (parsed && parsed.__pa_message_v1 === true) return {
+      text: typeof parsed.text === "string" ? parsed.text : "",
+      sources: Array.isArray(parsed.sources) ? parsed.sources.filter(x => x && typeof x.url === "string" && /^https?:\/\//i.test(x.url)).slice(0, 8) : []
+    };
   } catch {}
-  return { text: content, images: [], sources: [] };
+  return { text: content, sources: [] };
 }
 
 const PROJECT_DELTA_SOURCE_URL = "https://gist.githubusercontent.com/pdvisual/b8a0219539847ec494b769d83682baeb/raw/9abc1c2803098634ad05e8dbc1301e34d95dbba9/gistfile1.txt";
@@ -535,7 +538,7 @@ async function handleApi(request, env, path) {
         env.DB.prepare("UPDATE chats SET updated_at=?, model=? WHERE id=? AND user_id=?")
           .bind(now + 1, mode, chatId, user.id)
       ]);
-      return json({ chatId, reply: reply.trim(), remaining, mode, sources, provider: "Cloudflare Workers AI", model: actualModel });
+      return json({ chatId, reply: reply.trim(), mode, sources, provider: "Cloudflare Workers AI", model: actualModel });
     } catch (e) {
       const status = Number(e?.status || e?.statusCode || e?.response?.status || 0);
       console.error("Workers AI request failed", status || "unknown", e?.message || "unknown error");
