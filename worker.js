@@ -275,8 +275,6 @@ async function handleApi(request, env, path) {
       parts: [{ text: item.content }]
     }));
     contents.push({ role: "user", parts: currentParts });
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 90000);
     try {
       const geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + MODES[mode].model + ":generateContent";
       const geminiRequest = {
@@ -286,20 +284,33 @@ async function handleApi(request, env, path) {
           systemInstruction: { parts: [{ text: MODES[mode].prompt }] },
           contents,
           generationConfig: {
-            maxOutputTokens: 4000,
+            maxOutputTokens: 2000,
             thinkingConfig: { thinkingLevel: "low" }
           }
-        }),
-        signal: controller.signal
+        })
       };
       let upstream;
+      let result = {};
+      let lastTimeout = false;
       for (let attempt = 0; attempt < 3; attempt++) {
-        upstream = await fetch(geminiUrl, geminiRequest);
-        if (upstream.status !== 503 || attempt === 2) break;
-        console.warn("Gemini is overloaded; retrying request", attempt + 1);
-        await new Promise(resolve => setTimeout(resolve, 700 * (attempt + 1)));
+        const attemptController = new AbortController();
+        const attemptTimeout = setTimeout(() => attemptController.abort(), 27000);
+        try {
+          upstream = await fetch(geminiUrl, { ...geminiRequest, signal: attemptController.signal });
+          result = await upstream.json().catch(() => ({}));
+          lastTimeout = false;
+          if (upstream.status !== 503 || attempt === 2) break;
+          console.warn("Gemini returned 503; retrying", attempt + 1);
+        } catch (requestError) {
+          if (requestError.name !== "AbortError" || attempt === 2) throw requestError;
+          lastTimeout = true;
+          console.warn("Gemini request timed out; retrying", attempt + 1);
+        } finally {
+          clearTimeout(attemptTimeout);
+        }
+        await new Promise(resolve => setTimeout(resolve, 800 * (attempt + 1)));
       }
-      const result = await upstream.json().catch(() => ({}));
+      if (lastTimeout) throw new DOMException("Gemini request timed out", "AbortError");
       if (!upstream.ok) {
         const upstreamMessage = result?.error?.message || "unknown error";
         console.error("Gemini returned", upstream.status, upstreamMessage);
@@ -351,10 +362,8 @@ async function handleApi(request, env, path) {
       return json({ chatId, reply: reply.trim(), remaining, mode });
     } catch (e) {
       console.error("chat handler failed", e);
-      if (e.name === "AbortError") return error("Gemini не ответил за 90 секунд. Попробуй ещё раз.", 504);
+      if (e.name === "AbortError") return error("Gemini не ответил после трёх попыток по 27 секунд. Попробуй ещё раз чуть позже.", 504);
       return error("Не удалось выполнить запрос. Проверь Cloudflare Logs и доступность Gemini.", 502);
-    } finally {
-      clearTimeout(timeout);
     }
   }
   return error("API-маршрут не найден.", 404);
