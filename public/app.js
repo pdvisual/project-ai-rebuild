@@ -64,5 +64,5 @@ $("chatForm").onsubmit=async e=>{
  finally{clearTimeout(requestTimeout);busy=false;document.querySelectorAll("[data-mode]").forEach(b=>b.disabled=false);$("images").disabled=false;$("send").disabled=false;$("send").textContent="Отправить ↑";$("message").focus()}
 };
 async function health(){try{const data=await api("/api/health");$("healthDot").className=data.geminiConfigured?"ok":"bad";$("healthText").textContent=data.geminiConfigured?"Сервис готов":"Gemini API не настроен"}catch{$("healthDot").className="bad";$("healthText").textContent="Нет соединения"}}
-setMode("apricity");checkSession();health();
+setMode(mode);checkSession();health();
 })();
