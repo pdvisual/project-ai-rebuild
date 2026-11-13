@@ -535,7 +535,7 @@ async function handleApi(request, env, path) {
       const rawReply = (candidate?.content?.parts || [])
         .map(part => typeof part.text === "string" ? part.text : "")
         .join("");
-      const reply = cleanAssistantFormatting(rawReply);
+      let reply = cleanAssistantFormatting(rawReply);
       const sources = [];
       const seenSourceUrls = new Set();
       for (const chunk of (candidate?.groundingMetadata?.groundingChunks || [])) {
@@ -545,6 +545,11 @@ async function handleApi(request, env, path) {
         seenSourceUrls.add(uri);
         sources.push({ title: safeText(webSource.title, 180) || new URL(uri).hostname, url: uri });
         if (sources.length >= 8) break;
+      }
+      const currentInfoRequested = enabledPlugins.includes("web_search") &&
+        /(сегодня|сейчас|актуальн|последн|ближайш|следующ|расписан|матч|турнир|результат|цена|курс|новост|погода|this week|today|now|latest|next match|schedule|price|news|weather)/i.test(message);
+      if (currentInfoRequested && sources.length === 0) {
+        reply += "\\n\\nНе удалось получить проверяемые веб-источники в этом запросе. Актуальность данных не подтверждена.";
       }
       if (typeof reply !== "string" || !reply.trim()) {
         console.error("Response service returned no text", result?.promptFeedback?.blockReason || result?.candidates?.[0]?.finishReason || "empty response");
