@@ -7,13 +7,13 @@ function toast(message){const el=$("toast");el.textContent=message;el.classList.
 async function api(path,options={}) {
  const response=await fetch(path,{credentials:"same-origin",...options});
  const data=await response.json().catch(()=>({}));
- if(!response.ok)throw new Error(data.error||`Ошибка сервера (${response.status})`);
+ if(!response.ok){const err=new Error(data.error||`Ошибка сервера (${response.status})`);err.code=data.code||"PA-999";throw err;}
  return data;
 }
 function setAuthMode(value){authMode=value;$("loginTab").classList.toggle("active",value==="login");$("registerTab").classList.toggle("active",value==="register");$("authSubmit").textContent=value==="login"?"Войти":"Создать аккаунт";$("password").autocomplete=value==="login"?"current-password":"new-password";$("authError").textContent=""}
 function showAuth(){ $("app").classList.add("hidden");$("authScreen").classList.remove("hidden") }
 function showApp(user){$("authScreen").classList.add("hidden");$("app").classList.remove("hidden");$("userEmail").textContent=user.email||"";loadChats()}
-async function checkSession(){try{const data=await api("/api/me");if(data.authenticated)showApp(data.user);else showAuth()}catch(e){showAuth();$("authError").textContent="Не удалось проверить сессию: "+e.message}}
+async function checkSession(){try{const data=await api("/api/me");if(data.authenticated)showApp(data.user);else showAuth()}catch(e){showAuth();$("authError").textContent="Не удалось проверить сессию: "+e.message+(e.code?" ["+e.code+"]":"")}}
 $("loginTab").onclick=()=>setAuthMode("login");$("registerTab").onclick=()=>setAuthMode("register");
 $("authForm").onsubmit=async e=>{e.preventDefault();$("authSubmit").disabled=true;$("authError").textContent="";try{const data=await api(authMode==="login"?"/api/login":"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("email").value.trim(),password:$("password").value})});showApp(data.user)}catch(err){$("authError").textContent=err.message}finally{$("authSubmit").disabled=false}};
 $("logout").onclick=async()=>{try{await api("/api/logout",{method:"POST"})}catch(e){toast(e.message)}finally{chats=[];chatId=null;showAuth()}};
@@ -60,9 +60,9 @@ $("chatForm").onsubmit=async e=>{
   if(mode==="sonder"&&data.remaining!==null)$("limitText").textContent=`Осталось запросов: ${data.remaining} из 50`;
   const existing=chats.find(c=>c.id===chatId);if(existing){existing.updated_at=Date.now()/1000}else chats.unshift({id:chatId,title:displayText.slice(0,80)||"Анализ изображения",model:mode});
   renderChatList();
- }catch(err){const message=err.name==="AbortError"?"Превышено время ожидания ответа (100 секунд). Проверь соединение и попробуй ещё раз.":err.message;pending.textContent="Ошибка: "+message;pending.classList.add("error");toast(message)}
+ }catch(err){const message=err.name==="AbortError"?"Превышено время ожидания ответа (100 секунд). Проверь соединение и попробуй ещё раз.":err.message;pending.textContent="Ошибка: "+message+(err.code?" ["+err.code+"]":"");pending.classList.add("error");toast(message+(err.code?" · "+err.code:""))}
  finally{clearTimeout(requestTimeout);busy=false;document.querySelectorAll("[data-mode]").forEach(b=>b.disabled=false);$("images").disabled=false;$("send").disabled=false;$("send").textContent="Отправить ↑";$("message").focus()}
 };
-async function health(){try{const data=await api("/api/health");$("healthDot").className=data.geminiConfigured?"ok":"bad";$("healthText").textContent=data.geminiConfigured?"Сервис готов":"Gemini API не настроен"}catch{$("healthDot").className="bad";$("healthText").textContent="Нет соединения"}}
+async function health(){try{const data=await api("/api/health");$("healthDot").className=data.serviceConfigured?"ok":"bad";$("healthText").textContent=data.serviceConfigured?"Сервис готов":"Сервис не настроен"}catch{$("healthDot").className="bad";$("healthText").textContent="Нет соединения · PA-001"}}
 setMode(mode);checkSession();health();
 })();
