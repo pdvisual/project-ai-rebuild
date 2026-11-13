@@ -315,7 +315,7 @@ async function buildProjectDeltaContext(userMessage) {
 async function handleApi(request, env, path) {
   if (!env.DB) return error("На Worker не настроен D1 binding DB.", 500);
   if (path === "/api/health" && request.method === "GET") {
-    return json({ ok: true, database: true, serviceConfigured: Boolean(env.GEMINI_API_KEY) });
+    return json({ ok: true, database: true, serviceConfigured: Boolean(env.OPENROUTER_API_KEY) });
   }
   if (path === "/api/register" && request.method === "POST") {
     let data;
@@ -443,11 +443,6 @@ async function handleApi(request, env, path) {
       "SELECT role, content FROM messages WHERE chat_id=? ORDER BY created_at DESC, rowid DESC LIMIT 20"
     ).bind(chatId).all();
     const history = (historyRows.results || []).reverse().map(m => ({ role: m.role, ...parseStoredMessage(m.content) }));
-    const currentParts = [{ text: message || "Проанализируй приложенное изображение подробно." }];
-    for (const img of images) {
-      const base64 = img.dataUrl.slice(img.dataUrl.indexOf(",") + 1);
-      currentParts.push({ inline_data: { mime_type: img.mime, data: base64 } });
-    }
     const toMessageContent = (text, imageData = []) => {
       if (!imageData.length) return text || " ";
       return [
