@@ -201,11 +201,7 @@ async function buildProjectDeltaContext(userMessage) {
   const hits = [];
   for (const needle of needles) {
     if (needle.length < 3) continue;
-    const escaped = needle.replace(/[.*+?^{}()|[\]\\]/g, "\\function safeText(value, max = 20000) {
-  return typeof value === "string" ? value.trim().slice(0, max) : "";
-}
-
-async function handleApi(request, env, path) {");
+    const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const re = new RegExp(escaped, "gi");
     let match, count = 0;
     while ((match = re.exec(source)) && count < 2) {
@@ -362,6 +358,7 @@ async function handleApi(request, env, path) {
       parts: [{ text: item.content }]
     }));
     contents.push({ role: "user", parts: currentParts });
+    const systemPrompt = mode === "force" ? await buildProjectDeltaContext(message) : MODES[mode].prompt;
     try {
       let upstream;
       let result = {};
@@ -375,7 +372,7 @@ async function handleApi(request, env, path) {
           method: "POST",
           headers: { "x-goog-api-key": env.GEMINI_API_KEY, "Content-Type": "application/json" },
           body: JSON.stringify({
-            systemInstruction: { parts: [{ text: mode === "force" ? await buildProjectDeltaContext(message) : MODES[mode].prompt }] },
+            systemInstruction: { parts: [{ text: systemPrompt }] },
             contents,
             generationConfig: {
               maxOutputTokens: 1600,
