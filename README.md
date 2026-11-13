@@ -15,6 +15,8 @@
 
 ```bash
 npm install
+cp .dev.vars.example .dev.vars
+# Открой .dev.vars и добавь свой OPENROUTER_API_KEY
 npx wrangler login
 npm run dev
 ```
