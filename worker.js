@@ -283,11 +283,11 @@ async function handleApi(request, env, path) {
         method: "POST",
         headers: { "x-goog-api-key": env.GEMINI_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({
-          system_instruction: { parts: [{ text: MODES[mode].prompt }] },
+          systemInstruction: { parts: [{ text: MODES[mode].prompt }] },
           contents,
-          generation_config: {
-            max_output_tokens: 4000,
-            thinking_config: { thinking_level: "low" }
+          generationConfig: {
+            maxOutputTokens: 4000,
+            thinkingConfig: { thinkingLevel: "low" }
           }
         }),
         signal: controller.signal
