@@ -140,3 +140,7 @@ button,.chat-row,.model-option{transition:background .18s,border-color .18s,colo
 
 
 .plugin-section-title{margin:0 0 7px;font-size:14px;font-weight:700}.plugin-intro{margin-bottom:12px}.plugin-row{padding:11px 0;border-top:1px solid #ffffff0d}.plugin-row:first-of-type{border-top:0}
+
+
+/* Search source links returned by the Web Search plugin. */
+.message-sources{display:flex;flex-direction:column;gap:5px;margin-top:12px;padding-top:9px;border-top:1px solid var(--border);font-size:12px}.message-sources strong{color:var(--muted);font-weight:600;margin-bottom:2px}.message-sources a{color:var(--accent);text-decoration:none;overflow-wrap:anywhere}.message-sources a:hover{text-decoration:underline}
