@@ -1,9 +1,6 @@
 const COOKIE_NAME = "pa_session";
 const SESSION_SECONDS = 60 * 60 * 24 * 30;
 const MAX_JSON_BYTES = 24 * 1024 * 1024;
-const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
-const MAX_IMAGES = 4;
-const MAX_TOTAL_IMAGE_BYTES = 16 * 1024 * 1024;
 
 const MODES = {
   force: {
@@ -18,10 +15,7 @@ const MODES = {
     label: "Axiom 2.0",
     prompt: "Ты Axiom 2.0 — режим глубокого анализа Project AI. Разбирай сложные задачи по этапам внутренне, проверяй предположения, ищи противоречия и перепроверяй вычисления и выводы. Если данных недостаточно, обозначай неопределённость и задавай один точный уточняющий вопрос. Для кода анализируй причины, крайние случаи и последствия изменений. Не показывай скрытые внутренние рассуждения; давай ясное обоснование, ключевые шаги и проверяемый вывод. Отвечай на языке пользователя."
   },
-  sonder: {
-    label: "Sonder 1.3",
-    prompt: "Ты Sonder 1.3 — режим анализа изображений Project AI. Внимательно анализируй приложенные изображения, скриншоты, фотографии, диаграммы и текст на изображениях. Не утверждай, что видишь то, чего нет на изображении. Если изображение не приложено, попроси пользователя добавить его. Отвечай на языке пользователя."
-  }
+
 };
 
 
@@ -193,14 +187,6 @@ async function listChats(user, env) {
 async function ownedChat(chatId, user, env) {
   return env.DB.prepare("SELECT id, title, model FROM chats WHERE id=? AND user_id=?")
     .bind(chatId, user.id).first();
-}
-function decodeDataUrl(dataUrl) {
-  if (typeof dataUrl !== "string") throw new Error("Некорректное изображение.");
-  const match = dataUrl.match(/^data:(image\/(?:jpeg|png|webp|gif));base64,([A-Za-z0-9+/=]+)$/);
-  if (!match) throw new Error("Поддерживаются только JPEG, PNG, WebP и GIF.");
-  const binary = atob(match[2]);
-  if (binary.length > MAX_IMAGE_BYTES) throw new Error("Каждое изображение должно быть не больше 4 МБ.");
-  return { mime: match[1], dataUrl };
 }
 function safeText(value, max = 20000) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -410,26 +396,8 @@ async function handleApi(request, env, path) {
     try { data = await bodyJson(request); } catch { return error("Не удалось прочитать запрос. Проверь размер сообщения и изображений.", 400); }
     const mode = MODES[data.mode] ? data.mode : "apricity";
     const message = safeText(data.message, 20000);
-    let images = [];
-    try { images = Array.isArray(data.images) ? data.images.slice(0, MAX_IMAGES).map(decodeDataUrl) : []; }
-    catch (e) { return error(e.message, 400); }
-    if (mode === "sonder" && images.length === 0) return error("Для Sonder прикрепи хотя бы одно изображение.");
-    if (!message && !images.length) return error("Напиши сообщение или прикрепи изображение.");
-    if (mode === "sonder" && data.images?.length > MAX_IMAGES) return error("Можно прикрепить не более четырёх изображений.");
-    let remaining = mode === "sonder" ? 50 : null;
-    if (mode === "sonder") {
-      const now = Math.floor(Date.now() / 1000);
-      const row = await env.DB.prepare(
-        "SELECT COUNT(*) AS used FROM usage_events WHERE user_id=? AND model='sonder' AND created_at > ?"
-      ).bind(user.id, now - 86400).first();
-      if (Number(row?.used || 0) >= 50) return error("Лимит Sonder исчерпан: 50 запросов за скользящие 24 часа. Попробуй позже.", 429);
-      remaining = Math.max(0, 50 - Number(row?.used || 0));
-    }
-    const totalImageBytes = images.reduce((sum, img) => sum + Math.floor((img.dataUrl.length - img.dataUrl.indexOf(",") - 1) * 3 / 4), 0);
-    if (totalImageBytes > MAX_TOTAL_IMAGE_BYTES) return error("Общий размер изображений не должен превышать 16 МБ.", 400);
-    const storedImageData = images.map(img => img.dataUrl);
-    const storedImageBytes = storedImageData.reduce((sum, value) => sum + value.length, 0);
-    if (storedImageBytes > 1450000) return error("После сжатия изображения всё ещё слишком велики для сохранения в истории. Уменьши количество или размер фото.", 413, "PA-106");
+    if (Array.isArray(data.images) && data.images.length) return error("Загрузка изображений отключена.", 400, "PA-107");
+    if (!message) return error("Напиши сообщение.", 400);
     let chatId = safeText(data.chatId, 80);
     let chat = chatId ? await ownedChat(chatId, user, env) : null;
     if (chatId && !chat) return error("Чат не найден или у тебя нет к нему доступа.", 404);
@@ -437,18 +405,11 @@ async function handleApi(request, env, path) {
       "SELECT role, content FROM messages WHERE chat_id=? ORDER BY created_at DESC, rowid DESC LIMIT 20"
     ).bind(chatId).all();
     const history = (historyRows.results || []).reverse().map(m => ({ role: m.role, ...parseStoredMessage(m.content) }));
-    const toMessageContent = (text, imageData = []) => {
-      if (!imageData.length) return text || " ";
-      return [
-        { type: "text", text: text || " " },
-        ...imageData.map(dataUrl => ({ type: "image_url", image_url: { url: dataUrl } }))
-      ];
-    };
     const historyMessages = history.map(item => ({
       role: item.role === "assistant" ? "assistant" : "user",
-      content: toMessageContent(item.text, item.images)
+      content: item.text || " "
     }));
-    const currentMessageContent = toMessageContent(message || "Проанализируй приложенное изображение подробно.", storedImageData);
+    const currentMessageContent = message;
     const userMemory = safeText(data.memory, 4000);
     const enabledPlugins = Array.isArray(data.enabledPlugins) ? data.enabledPlugins.filter(x => ["web_search", "calculator", "github"].includes(x)) : [];
     const pluginContext = [];
@@ -557,12 +518,12 @@ async function handleApi(request, env, path) {
       }
       const actualModel = model;
       const now = Math.floor(Date.now() / 1000);
-      const userText = message || "Проанализируй приложенное изображение.";
-      const storedUserContent = storedImageData.length ? JSON.stringify({ __pa_message_v1: true, text: userText, images: storedImageData }) : userText;
+      const userText = message;
+      const storedUserContent = userText;
       const storedAssistantContent = reply.trim();
       if (!chat) {
         chatId = uuid();
-        const title = userText.slice(0, 80) || "Анализ изображения";
+        const title = userText.slice(0, 80) || "Новый чат";
         await env.DB.prepare("INSERT INTO chats (id,user_id,title,model,created_at,updated_at) VALUES (?,?,?,?,?,?)")
           .bind(chatId, user.id, title, mode, now, now).run();
       }
@@ -574,14 +535,6 @@ async function handleApi(request, env, path) {
         env.DB.prepare("UPDATE chats SET updated_at=?, model=? WHERE id=? AND user_id=?")
           .bind(now + 1, mode, chatId, user.id)
       ]);
-      if (mode === "sonder") {
-        await env.DB.prepare("INSERT INTO usage_events (id,user_id,model,created_at) VALUES (?,?,?,?)")
-          .bind(uuid(), user.id, "sonder", now + 1).run();
-        const usage = await env.DB.prepare(
-          "SELECT COUNT(*) AS used FROM usage_events WHERE user_id=? AND model='sonder' AND created_at > ?"
-        ).bind(user.id, now + 1 - 86400).first();
-        remaining = Math.max(0, 50 - Number(usage?.used || 0));
-      }
       return json({ chatId, reply: reply.trim(), remaining, mode, sources, provider: "Cloudflare Workers AI", model: actualModel });
     } catch (e) {
       const status = Number(e?.status || e?.statusCode || e?.response?.status || 0);
