@@ -13,28 +13,6 @@ function applySettings(){
  $("memoryNotes").value=settings.notes||"";
 }
 
-$("imageGenOpen").onclick=()=>{$("imageGenDialog").showModal();$("imageGenPrompt").focus()};
-$("imageGenClose").onclick=()=>$("imageGenDialog").close();
-$("imageGenDialog").addEventListener("click",e=>{if(e.target===$("imageGenDialog"))$("imageGenDialog").close()});
-$("imageGenForm").onsubmit=async e=>{
- e.preventDefault();if(busy)return;
- const prompt=$("imageGenPrompt").value.trim();if(!prompt)return;
- busy=true;$("imageGenSubmit").disabled=true;$("imageGenOpen").disabled=true;$("imageGenSubmit").textContent="Создаю...";
- $("imageGenDialog").close();bubble(prompt,"user");
- const pending=bubble("Создаю изображение. Это может занять немного времени...","assistant");
- const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),120000);
- try{
-  const data=await api("/api/generate-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt,aspectRatio:$("imageGenRatio").value,chatId}),signal:controller.signal});
-  chatId=data.chatId;pending.remove();bubble("Готово. Вот созданное изображение.","assistant",false,[data.image]);$("imageGenPrompt").value="";
-  const existing=chats.find(c=>c.id===chatId);if(existing){existing.updated_at=Date.now()/1000}else chats.unshift({id:chatId,title:("Изображение: "+prompt).slice(0,80),model:"apricity"});
-  renderChatList();
- }catch(err){
-  const message=err.name==="AbortError"?"Превышено время ожидания генерации. Попробуй ещё раз.":err.message;
-  pending.querySelector(".message-text").textContent="Ошибка: "+message+(err.code?" ["+err.code+"]":"");pending.classList.add("error");toast(message+(err.code?" · "+err.code:""));
- }finally{
-  clearTimeout(timeout);busy=false;$("imageGenSubmit").disabled=false;$("imageGenOpen").disabled=false;$("imageGenSubmit").textContent="Создать изображение";
- }
-};
 
 $("settingsOpen").onclick=()=>{$("settingsDialog").showModal();applySettings()};
 $("settingsForm").onsubmit=e=>{
