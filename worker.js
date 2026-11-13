@@ -489,11 +489,13 @@ async function handleApi(request, env, path) {
         { role: "user", content: currentMessageContent }
       ];
       const completion = await openRouter.chat.send({
-        models: modelFallbacks,
-        messages: requestMessages,
-        ...(enabledPlugins.includes("web_search")
-          ? { tools: [{ type: "openrouter:web_search" }] }
-          : {})
+        chatRequest: {
+          models: modelFallbacks,
+          messages: requestMessages,
+          ...(enabledPlugins.includes("web_search")
+            ? { tools: [{ type: "openrouter:web_search" }] }
+            : {})
+        }
       });
       const assistantMessage = completion?.choices?.[0]?.message;
       const rawReply = typeof assistantMessage?.content === "string"
