@@ -47,15 +47,17 @@ $("chatForm").onsubmit=async e=>{
  bubble(displayText,"user");
  const pending=bubble("Project AI обрабатывает запрос...","assistant");
  $("message").value="";$("message").style.height="auto";
+ const requestController=new AbortController();
+ const requestTimeout=setTimeout(()=>requestController.abort(),100000);
  try{
   const images=await Promise.all(selectedFiles.map(x=>fileData(x.file)));
-  const data=await api("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode,message,chatId,images})});
+  const data=await api("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode,message,chatId,images}),signal:requestController.signal});
   chatId=data.chatId;pending.textContent=data.reply;clearImages();
   if(mode==="sonder"&&data.remaining!==null)$("limitText").textContent=`Осталось запросов: ${data.remaining} из 50`;
   const existing=chats.find(c=>c.id===chatId);if(existing){existing.updated_at=Date.now()/1000}else chats.unshift({id:chatId,title:displayText.slice(0,80)||"Анализ изображения",model:mode});
   renderChatList();
- }catch(err){pending.textContent="Ошибка: "+err.message;pending.classList.add("error");toast(err.message)}
- finally{busy=false;document.querySelectorAll("[data-mode]").forEach(b=>b.disabled=false);$("images").disabled=false;$("send").disabled=false;$("send").textContent="Отправить ↑";$("message").focus()}
+ }catch(err){const message=err.name==="AbortError"?"Превышено время ожидания ответа (100 секунд). Проверь соединение и попробуй ещё раз.":err.message;pending.textContent="Ошибка: "+message;pending.classList.add("error");toast(message)}
+ finally{clearTimeout(requestTimeout);busy=false;document.querySelectorAll("[data-mode]").forEach(b=>b.disabled=false);$("images").disabled=false;$("send").disabled=false;$("send").textContent="Отправить ↑";$("message").focus()}
 };
 async function health(){try{const data=await api("/api/health");$("healthDot").className=data.geminiConfigured?"ok":"bad";$("healthText").textContent=data.geminiConfigured?"Сервис готов":"Gemini API не настроен"}catch{$("healthDot").className="bad";$("healthText").textContent="Нет соединения"}}
 setMode("apricity");checkSession();health();
