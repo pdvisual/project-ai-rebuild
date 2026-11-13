@@ -505,14 +505,21 @@ async function handleApi(request, env, path) {
         }
         const searchQuery = safeText(argumentsValue?.query, 1024);
         if (searchQuery) {
-          const searchResponse = await env.AI.websearch({
-            gatewayId: "default",
-            query: searchQuery,
-            provider: "exa",
-            limit: 5
-          });
-          const searchResults = await searchResponse.json();
-          searchItems = Array.isArray(searchResults?.items) ? searchResults.items : [];
+          let searchResults;
+          try {
+            const searchResponse = await env.AI.websearch({
+              gatewayId: "default",
+              query: searchQuery,
+              provider: "exa",
+              limit: 5
+            });
+            if (!searchResponse.ok) throw new Error("Web Search API HTTP " + searchResponse.status);
+            searchResults = await searchResponse.json();
+            searchItems = Array.isArray(searchResults?.items) ? searchResults.items : [];
+          } catch (searchError) {
+            console.error("Cloudflare Web Search failed", searchError?.message || "unknown error");
+            return error("Веб-поиск не запустился. Проверь AI Gateway: нужны кредиты или API-ключ провайдера (Exa/Ceramic/Linkup). Код PA-211.", 503, "PA-211");
+          }
           completion = await env.AI.run(model, {
             messages: [
               ...requestMessages,
