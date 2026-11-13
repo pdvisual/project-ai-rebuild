@@ -309,7 +309,7 @@ async function buildProjectDeltaContext(userMessage) {
 async function handleApi(request, env, path) {
   if (!env.DB) return error("На Worker не настроен D1 binding DB.", 500);
   if (path === "/api/health" && request.method === "GET") {
-    return json({ ok: true, database: true, serviceConfigured: Boolean(env.AI) });
+    return json({ ok: true, database: true, serviceConfigured: Boolean(env.AI), provider: "Cloudflare Workers AI", model: "@cf/google/gemma-4-26b-a4b-it" });
   }
   if (path === "/api/register" && request.method === "POST") {
     let data;
