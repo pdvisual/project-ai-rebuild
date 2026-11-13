@@ -285,7 +285,10 @@ async function handleApi(request, env, path) {
         body: JSON.stringify({
           system_instruction: { parts: [{ text: MODES[mode].prompt }] },
           contents,
-          generation_config: { max_output_tokens: 4000 }
+          generation_config: {
+            max_output_tokens: 4000,
+            thinking_config: { thinking_level: "low" }
+          }
         }),
         signal: controller.signal
       };
