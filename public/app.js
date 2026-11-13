@@ -2,7 +2,7 @@
 "use strict";
 const $=id=>document.getElementById(id);
 const modes={force:"Force 1.1",apricity:"Apricity 1.2",sonder:"Sonder 1.3"};
-let mode="apricity",authMode="login",chatId=null,chats=[],selectedFiles=[],busy=false,toastTimer=null,renameTarget=null;
+let mode=(()=>{try{const saved=localStorage.getItem("project-ai-mode");return ["force","apricity","sonder"].includes(saved)?saved:"apricity"}catch{return "apricity"}})(),authMode="login",chatId=null,chats=[],selectedFiles=[],busy=false,toastTimer=null,renameTarget=null;
 function toast(message){const el=$("toast");el.textContent=message;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),3800)}
 async function api(path,options={}) {
  const response=await fetch(path,{credentials:"same-origin",...options});
@@ -18,9 +18,9 @@ $("loginTab").onclick=()=>setAuthMode("login");$("registerTab").onclick=()=>setA
 $("authForm").onsubmit=async e=>{e.preventDefault();$("authSubmit").disabled=true;$("authError").textContent="";try{const data=await api(authMode==="login"?"/api/login":"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("email").value.trim(),password:$("password").value})});showApp(data.user)}catch(err){$("authError").textContent=err.message}finally{$("authSubmit").disabled=false}};
 $("logout").onclick=async()=>{try{await api("/api/logout",{method:"POST"})}catch(e){toast(e.message)}finally{chats=[];chatId=null;showAuth()}};
 function closeModelMenu(){$("modelMenu").classList.add("hidden");$("modelPicker").setAttribute("aria-expanded","false")}
-function setMode(next){if(busy)return;mode=modes[next]?next:"apricity";$("modeTitle").textContent=modes[mode];document.querySelectorAll("[data-mode]").forEach(b=>{const active=b.dataset.mode===mode;b.classList.toggle("selected",active);b.setAttribute("aria-checked",String(active))});$("attachLabel").classList.toggle("hidden",mode!=="sonder");$("limitText").textContent=mode==="sonder"?"50 запросов за скользящие 24 часа":"";if(mode!=="sonder")clearImages();closeModelMenu()}
-$("modelPicker").onclick=()=>{const open=$("modelMenu").classList.toggle("hidden")===false;$("modelPicker").setAttribute("aria-expanded",String(open))};
-document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+function setMode(next){mode=modes[next]?next:"apricity";try{localStorage.setItem("project-ai-mode",mode)}catch{}$("modeTitle").textContent=modes[mode];document.querySelectorAll("[data-mode]").forEach(b=>{const active=b.dataset.mode===mode;b.classList.toggle("selected",active);b.setAttribute("aria-checked",String(active))});$("attachLabel").classList.toggle("hidden",mode!=="sonder");$("limitText").textContent=mode==="sonder"?"50 запросов за скользящие 24 часа":"";if(mode!=="sonder")clearImages();closeModelMenu()}
+$("modelPicker").addEventListener("click",e=>{e.preventDefault();const open=$("modelMenu").classList.contains("hidden");$("modelMenu").classList.toggle("hidden",!open);$("modelPicker").setAttribute("aria-expanded",String(open))});
+$("modelMenu").addEventListener("click",e=>{const option=e.target.closest("[data-mode]");if(!option)return;e.preventDefault();setMode(option.dataset.mode)});
 document.addEventListener("click",e=>{if(!e.target.closest(".model-picker-wrap"))closeModelMenu()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModelMenu()});
 function renderWelcome(){const w=document.createElement("div");w.className="welcome";w.innerHTML='<div class="welcome-icon">✳</div><h1>Чем могу помочь?</h1><p>Выбери режим и начни общение с Project AI.</p>';$("messages").append(w)}
