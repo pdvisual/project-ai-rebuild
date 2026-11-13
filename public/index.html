@@ -33,12 +33,20 @@
   <main class="main">
     <header class="topbar">
       <button id="mobileMenu" class="icon-button" aria-label="Меню">☰</button>
-      <div><div class="mode-heading" id="modeTitle">Apricity 1.2</div><div class="provider-note">Project AI</div></div>
+      <div class="model-picker-wrap">
+        <button id="modelPicker" class="model-picker" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="modelMenu">
+          <span><span class="mode-heading" id="modeTitle">Apricity 1.2</span><span class="provider-note">Project AI</span></span>
+          <span class="picker-chevron" aria-hidden="true">⌄</span>
+        </button>
+        <div id="modelMenu" class="model-menu hidden" role="menu" aria-label="Выбор режима Project AI">
+          <div class="model-menu-label">ВЫБЕРИ РЕЖИМ</div>
+          <button class="model-option" type="button" data-mode="force" role="menuitemradio" aria-checked="false"><span class="model-option-icon">ϟ</span><span class="model-option-copy"><strong>Force 1.1</strong><small>Помощник по программированию</small></span><span class="model-check">✓</span></button>
+          <button class="model-option selected" type="button" data-mode="apricity" role="menuitemradio" aria-checked="true"><span class="model-option-icon">✳</span><span class="model-option-copy"><strong>Apricity 1.2</strong><small>Универсальный помощник</small></span><span class="model-check">✓</span></button>
+          <button class="model-option" type="button" data-mode="sonder" role="menuitemradio" aria-checked="false"><span class="model-option-icon">◉</span><span class="model-option-copy"><strong>Sonder 1.3</strong><small>Анализ изображений · до 50 запросов/24 ч</small></span><span class="model-check">✓</span></button>
+        </div>
+      </div>
       <div class="top-status"><i id="healthDot"></i><span id="healthText">Проверка</span></div>
     </header>
-    <nav class="modes">
-      <button data-mode="force">Force 1.1</button><button data-mode="apricity" class="selected">Apricity 1.2</button><button data-mode="sonder">Sonder 1.3</button>
-    </nav>
     <section id="messages" class="messages">
       <div class="welcome"><div class="welcome-icon">✳</div><h1>Чем могу помочь?</h1><p>Выбери режим и начни общение с Project AI.</p></div>
     </section>
