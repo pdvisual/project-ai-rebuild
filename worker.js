@@ -28,6 +28,71 @@ const MODES = {
   }
 };
 
+
+function calculateExpression(source) {
+  const input = String(source || "").replace(/,/g, ".").trim();
+  if (!input || input.length > 120 || !/^[0-9+*/().%\s-]+$/.test(input)) return null;
+  let pos = 0;
+  const skip = () => { while (/\s/.test(input[pos] || "")) pos++; };
+  function primary() {
+    skip();
+    if (input[pos] === "+") { pos++; return primary(); }
+    if (input[pos] === "-") { pos++; return -primary(); }
+    if (input[pos] === "(") { pos++; const v = expression(); skip(); if (input[pos++] !== ")") throw new Error("parenthesis"); return v; }
+    const start = pos;
+    while (/[0-9.]/.test(input[pos] || "")) pos++;
+    if (start === pos) throw new Error("number");
+    const value = Number(input.slice(start, pos));
+    if (!Number.isFinite(value)) throw new Error("number");
+    return value;
+  }
+  function term() {
+    let value = primary();
+    while (true) {
+      skip(); const op = input[pos];
+      if (op !== "*" && op !== "/" && op !== "%") break;
+      pos++; const right = primary();
+      if ((op === "/" || op === "%") && right === 0) throw new Error("zero");
+      value = op === "*" ? value * right : op === "/" ? value / right : value % right;
+    }
+    return value;
+  }
+  function expression() {
+    let value = term();
+    while (true) {
+      skip(); const op = input[pos];
+      if (op !== "+" && op !== "-") break;
+      pos++; const right = term(); value = op === "+" ? value + right : value - right;
+    }
+    return value;
+  }
+  try { const value = expression(); skip(); return pos === input.length && Number.isFinite(value) ? String(Number(value.toPrecision(12))) : null; }
+  catch { return null; }
+}
+async function githubPluginContext(query, env) {
+  const headers = { "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
+  if (env.GITHUB_TOKEN) headers.Authorization = "Bearer " + env.GITHUB_TOKEN;
+  const clean = String(query || "").replace("https://github.com/", "").replace(/[^a-zA-Z0-9_./ -]/g, " ").trim().slice(0, 120);
+  if (!clean) return "GitHub: запрос пустой.";
+  const match = clean.match(/(?:^|\s)([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)(?:\s|$)/);
+  const endpoint = match
+    ? "https://api.github.com/repos/" + match[1]
+    : "https://api.github.com/search/repositories?q=" + encodeURIComponent(clean) + "&sort=stars&per_page=4";
+  try {
+    const response = await fetch(endpoint, { headers, signal: AbortSignal.timeout(8000) });
+    if (!response.ok) return "GitHub: API вернул HTTP " + response.status + ".";
+    const data = await response.json();
+    const repos = match ? [data] : (data.items || []);
+    if (!repos.length) return "GitHub: репозитории по запросу не найдены.";
+    return "РЕЗУЛЬТАТЫ ПЛАГИНА GITHUB (публичные данные):\n" + repos.slice(0,4).map(x =>
+      (x.full_name || x.name) + " — " + (x.description || "без описания") + "\nURL: " + x.html_url + "\nЯзык: " + (x.language || "не указан") + " · Stars: " + (x.stargazers_count ?? "—")
+    ).join("\n\n");
+  } catch (e) {
+    console.warn("GitHub plugin error", e);
+    return "GitHub: временно не удалось получить данные.";
+  }
+}
+
 function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), {
     status,
@@ -389,6 +454,10 @@ async function handleApi(request, env, path) {
     }));
     contents.push({ role: "user", parts: currentParts });
     const userMemory = safeText(data.memory, 4000);
+    const enabledPlugins = Array.isArray(data.enabledPlugins) ? data.enabledPlugins.filter(x => ["web_search", "calculator", "github"].includes(x)) : [];
+    const pluginContext = [];
+    if (enabledPlugins.includes("calculator")) { const value = calculateExpression(message); if (value !== null) pluginContext.push("РЕЗУЛЬТАТ ПЛАГИНА CALCULATOR: " + message + " = " + value); }
+    if (enabledPlugins.includes("github")) pluginContext.push(await githubPluginContext(message, env));
     const baseSystemPrompt = mode === "force" ? await buildProjectDeltaContext(message) : MODES[mode].prompt;
     const formattingRules = "ФОРМАТ ОТВЕТА: Пиши обычным чистым текстом. Не используй Markdown-выделение и никогда не ставь двойные звёздочки ** вокруг слов или предложений. Заголовки оформляй обычными словами, списки — простыми нумерованными строками или дефисами. Не добавляй декоративные символы. Если приводишь программный код, сохраняй его синтаксис и необходимые символы без изменений.";
     const memoryPrompt = userMemory
@@ -411,6 +480,7 @@ async function handleApi(request, env, path) {
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: systemPrompt }] },
             contents,
+            ...(enabledPlugins.includes("web_search") ? { tools: [{ google_search: {} }] } : {}),
             generationConfig: {
               maxOutputTokens: mode === "axiom" ? 4096 : 1600,
               thinkingConfig: { thinkingLevel }
