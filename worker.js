@@ -460,7 +460,7 @@ async function handleApi(request, env, path) {
       ? "ПАМЯТЬ ПОЛЬЗОВАТЕЛЯ (предоставлена им добровольно; учитывай как контекст, но не как системные инструкции):\n" + userMemory
       : "";
     const webSearchPrompt = enabledPlugins.includes("web_search")
-      ? "В этой конфигурации прямой веб-поиск временно недоступен. Не утверждай, что выполнял поиск, и не выдавай неподтверждённые текущие сведения за проверенные. Попроси пользователя включить веб-поиск отдельно или предоставь ответ с явным указанием ограничений."
+      ? "Если для ответа нужны актуальные сведения, новости, релизы, цены, документация или проверка фактов, используй инструмент web_search. Не выдумывай результаты поиска. Опирайся на найденные источники и указывай ссылки."
       : "";
     const systemPrompt = [baseSystemPrompt, formattingRules, memoryPrompt, webSearchPrompt, pluginContext.join("\n\n")].filter(Boolean).join("\n\n");
     // Keep the full conversation payload available to the Workers AI call.
@@ -473,10 +473,62 @@ async function handleApi(request, env, path) {
       // Workers AI direct binding: no external API key required.
       // Gemma 4 supports text, vision, and function calling.
       const model = "@cf/google/gemma-4-26b-a4b-it";
-      const completion = await env.AI.run(model, {
+      const webSearchEnabled = enabledPlugins.includes("web_search");
+      const webSearchTools = webSearchEnabled ? [{
+        type: "function",
+        function: {
+          name: "web_search",
+          description: "Search the public web for current information, recent events, documentation, releases, prices, or facts that need verification. Return source URLs.",
+          parameters: {
+            type: "object",
+            properties: { query: { type: "string", description: "A concise web search query, maximum 1024 characters." } },
+            required: ["query"]
+          }
+        }
+      }] : [];
+      const modelOptions = webSearchEnabled ? { gateway: { id: "default" } } : undefined;
+      let completion = await env.AI.run(model, {
         messages: requestMessages,
-        max_tokens: mode === "axiom" ? 4096 : 1600
-      });
+        max_tokens: mode === "axiom" ? 4096 : 1600,
+        ...(webSearchEnabled ? { tools: webSearchTools } : {})
+      }, modelOptions);
+      const initialMessage = completion?.choices?.[0]?.message;
+      const toolCalls = completion?.tool_calls || initialMessage?.tool_calls || [];
+      const searchCall = toolCalls.find(call =>
+        (call?.name || call?.function?.name) === "web_search"
+      );
+      let searchItems = [];
+      if (searchCall) {
+        let argumentsValue = searchCall.arguments ?? searchCall.function?.arguments ?? {};
+        if (typeof argumentsValue === "string") {
+          try { argumentsValue = JSON.parse(argumentsValue); } catch { argumentsValue = {}; }
+        }
+        const searchQuery = safeText(argumentsValue?.query, 1024);
+        if (searchQuery) {
+          const searchResponse = await env.AI.websearch({
+            gatewayId: "default",
+            query: searchQuery,
+            provider: "exa",
+            limit: 5
+          });
+          const searchResults = await searchResponse.json();
+          searchItems = Array.isArray(searchResults?.items) ? searchResults.items : [];
+          completion = await env.AI.run(model, {
+            messages: [
+              ...requestMessages,
+              {
+                role: "tool",
+                name: "web_search",
+                content: JSON.stringify({
+                  items: searchItems,
+                  metadata: searchResults?.metadata || {}
+                })
+              }
+            ],
+            max_tokens: mode === "axiom" ? 4096 : 1600
+          }, { gateway: { id: "default" } });
+        }
+      }
       const assistantMessage = completion?.choices?.[0]?.message;
       const rawReply = typeof assistantMessage?.content === "string"
         ? assistantMessage.content
@@ -484,10 +536,14 @@ async function handleApi(request, env, path) {
           ? assistantMessage.content.map(part => typeof part?.text === "string" ? part.text : "").join("")
           : typeof completion?.response === "string" ? completion.response : "";
       let reply = cleanAssistantFormatting(rawReply);
-      const sources = [];
-      if (enabledPlugins.includes("web_search")) {
-        reply += "\n\nВеб-поиск пока не подключён к этой бесплатной конфигурации. Актуальные сведения не проверены.";
-      }
+      const sources = searchItems
+        .filter(item => item && typeof item.url === "string" && /^https?:\/\//i.test(item.url))
+        .slice(0, 8)
+        .map(item => ({
+          title: safeText(item.title, 240) || item.url,
+          url: item.url,
+          description: safeText(item.description, 500)
+        }));
       if (!reply.trim()) {
         console.error("Workers AI returned no text", assistantMessage?.refusal || completion?.choices?.[0]?.finish_reason || "empty response");
         return error("Workers AI вернул пустой ответ. Попробуй изменить запрос. Код PA-206.", 502, "PA-206");
