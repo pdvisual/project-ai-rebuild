@@ -8,17 +8,17 @@ const MAX_TOTAL_IMAGE_BYTES = 16 * 1024 * 1024;
 const MODES = {
   force: {
     label: "Force 1.1",
-    model: "deepseek-flash",
+    model: "gemini-3.8-flash",
     prompt: "Ты Force 1.1 — специализированный ИИ-ассистент Project AI по программированию. Твои основные задачи: написание, объяснение, исправление и отладка кода; Lua; Project Visual; поиск ошибок; архитектура программ. Давай точные технические ответы, при необходимости полный рабочий код. Не выдумывай API и функции. Если данных недостаточно — уточни. Отвечай на языке пользователя."
   },
   apricity: {
     label: "Apricity 1.2",
-    model: "deepseek-flash",
+    model: "gemini-3.8-flash",
     prompt: "Ты Apricity 1.2 — универсальный ИИ-ассистент Project AI. Помогай с повседневными вопросами, обучением, объяснениями, анализом и творческими задачами. Будь ясным, полезным и честным. Отвечай на языке пользователя."
   },
   sonder: {
     label: "Sonder 1.3",
-    model: "deepseek-flash",
+    model: "gemini-3.8-flash",
     prompt: "Ты Sonder 1.3 — режим анализа изображений Project AI. Внимательно анализируй приложенные изображения, скриншоты, фотографии, диаграммы и текст на изображениях. Не утверждай, что видишь то, чего нет на изображении. Если изображение не приложено, попроси пользователя добавить его. Отвечай на языке пользователя."
   }
 };
@@ -141,7 +141,7 @@ function safeText(value, max = 20000) {
 async function handleApi(request, env, path) {
   if (!env.DB) return error("На Worker не настроен D1 binding DB.", 500);
   if (path === "/api/health" && request.method === "GET") {
-    return json({ ok: true, database: true, deepseekConfigured: Boolean(env.DEEPSEEK_API_KEY) });
+    return json({ ok: true, database: true, geminiConfigured: Boolean(env.GEMINI_API_KEY) });
   }
   if (path === "/api/register" && request.method === "POST") {
     let data;
@@ -235,7 +235,7 @@ async function handleApi(request, env, path) {
     return json({ ok: true });
   }
   if (path === "/api/chat" && request.method === "POST") {
-    if (!env.DEEPSEEK_API_KEY) return error("На Cloudflare не задан Secret DEEPSEEK_API_KEY.", 503);
+    if (!env.GEMINI_API_KEY) return error("На Cloudflare не задан Secret GEMINI_API_KEY.", 503);
     let data;
     try { data = await bodyJson(request); } catch { return error("Не удалось прочитать запрос. Проверь размер сообщения и изображений.", 400); }
     const mode = MODES[data.mode] ? data.mode : "apricity";
@@ -265,38 +265,54 @@ async function handleApi(request, env, path) {
       "SELECT role, content FROM messages WHERE chat_id=? ORDER BY created_at DESC, rowid DESC LIMIT 20"
     ).bind(chatId).all();
     const history = (historyRows.results || []).reverse().map(m => ({ role: m.role, content: m.content }));
-    const userContent = mode === "sonder"
-      ? [{ type: "text", text: message || "Проанализируй приложенное изображение подробно." },
-         ...images.map(img => ({ type: "image_url", image_url: { url: img.dataUrl, detail: "auto" } }))]
-      : message;
+    const currentParts = [{ text: message || "Проанализируй приложенное изображение подробно." }];
+    for (const img of images) {
+      const base64 = img.dataUrl.slice(img.dataUrl.indexOf(",") + 1);
+      currentParts.push({ inline_data: { mime_type: img.mime, data: base64 } });
+    }
+    const contents = history.map(item => ({
+      role: item.role === "assistant" ? "model" : "user",
+      parts: [{ text: item.content }]
+    }));
+    contents.push({ role: "user", parts: currentParts });
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 90000);
     try {
-      const upstream = await fetch("https://api.deepseek.com/chat/completions", {
+      const upstream = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + MODES[mode].model + ":generateContent", {
         method: "POST",
-        headers: { "Authorization": `Bearer ${env.DEEPSEEK_API_KEY}`, "Content-Type": "application/json" },
+        headers: { "x-goog-api-key": env.GEMINI_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: MODES[mode].model,
-          messages: [{ role: "system", content: MODES[mode].prompt }, ...history, { role: "user", content: userContent }],
-          max_tokens: 4000,
-          stream: false
+          system_instruction: { parts: [{ text: MODES[mode].prompt }] },
+          contents,
+          generation_config: { max_output_tokens: 4000 }
         }),
         signal: controller.signal
       });
       const result = await upstream.json().catch(() => ({}));
       if (!upstream.ok) {
-        console.error("DeepSeek returned", upstream.status, result?.error?.message || "unknown error");
-        const friendly = {
-          401: "DeepSeek отклонил API-ключ. Проверь Secret DEEPSEEK_API_KEY.",
-          402: "Недостаточно средств на балансе DeepSeek.",
-          429: "Превышен лимит запросов DeepSeek. Попробуй позже.",
-          500: "Внутренняя ошибка DeepSeek. Попробуй позже.",
-          503: "DeepSeek временно недоступен."
-        };
-        return error(friendly[upstream.status] || `Ошибка DeepSeek API: ${result?.error?.message || upstream.status}`, 502);
+        const upstreamMessage = result?.error?.message || "unknown error";
+        console.error("Gemini returned", upstream.status, upstreamMessage);
+        const invalidKey = /API key not valid|API_KEY_INVALID|invalid api key/i.test(upstreamMessage);
+        const friendly = invalidKey
+          ? "Google Gemini отклонил API-ключ. Проверь Secret GEMINI_API_KEY."
+          : ({
+              400: "Gemini не принял запрос. Проверь формат запроса и доступ к модели.",
+              401: "Google Gemini отклонил API-ключ. Проверь Secret GEMINI_API_KEY.",
+              403: "Нет доступа к Gemini API. Проверь ключ и доступность API в Google AI Studio.",
+              404: "Модель Gemini не найдена или недоступна для этого API-ключа.",
+              429: "Исчерпан бесплатный лимит Gemini или превышена частота запросов. Попробуй позже.",
+              500: "Внутренняя ошибка Google Gemini. Попробуй позже.",
+              503: "Google Gemini временно недоступен."
+            })[upstream.status] || `Ошибка Gemini API: ${upstreamMessage}`;
+        return error(friendly, 502);
       }
-      const reply = result?.choices?.[0]?.message?.content;
-      if (typeof reply !== "string" || !reply.trim()) return error("DeepSeek вернул пустой ответ.", 502);
+      const reply = (result?.candidates?.[0]?.content?.parts || [])
+        .map(part => typeof part.text === "string" ? part.text : "")
+        .join("");
+      if (typeof reply !== "string" || !reply.trim()) {
+        console.error("Gemini returned no text", result?.promptFeedback?.blockReason || result?.candidates?.[0]?.finishReason || "empty response");
+        return error("Gemini не вернул текстовый ответ. Возможно, запрос был заблокирован фильтром безопасности.", 502);
+      }
       const now = Math.floor(Date.now() / 1000);
       const userText = message || "Проанализируй приложенное изображение.";
       if (!chat) {
@@ -324,8 +340,8 @@ async function handleApi(request, env, path) {
       return json({ chatId, reply: reply.trim(), remaining, mode });
     } catch (e) {
       console.error("chat handler failed", e);
-      if (e.name === "AbortError") return error("DeepSeek не ответил за 90 секунд. Попробуй ещё раз.", 504);
-      return error("Не удалось выполнить запрос. Проверь Cloudflare Logs и доступность DeepSeek.", 502);
+      if (e.name === "AbortError") return error("Gemini не ответил за 90 секунд. Попробуй ещё раз.", 504);
+      return error("Не удалось выполнить запрос. Проверь Cloudflare Logs и доступность Gemini.", 502);
     } finally {
       clearTimeout(timeout);
     }
