@@ -8,5 +8,10 @@
     "db:local": "wrangler d1 migrations apply project-ai-db --local",
     "db:remote": "wrangler d1 migrations apply project-ai-db --remote"
   },
-  "devDependencies": { "wrangler": "^4.0.0" }
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  },
+  "dependencies": {
+    "@openrouter/sdk": "^1.5.100"
+  }
 }
