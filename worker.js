@@ -16,6 +16,11 @@ const MODES = {
     model: "gemini-3.8-flash",
     prompt: "Ты Apricity 1.2 — универсальный ИИ-ассистент Project AI. Помогай с повседневными вопросами, обучением, объяснениями, анализом и творческими задачами. Будь ясным, полезным и честным. Отвечай на языке пользователя."
   },
+  axiom: {
+    label: "Axiom 2.0",
+    model: "gemini-3.8-flash",
+    prompt: "Ты Axiom 2.0 — режим глубокого анализа Project AI. Разбирай сложные задачи по этапам внутренне, проверяй предположения, ищи противоречия и перепроверяй вычисления и выводы. Если данных недостаточно, обозначай неопределённость и задавай один точный уточняющий вопрос. Для кода анализируй причины, крайние случаи и последствия изменений. Не показывай скрытые внутренние рассуждения; давай ясное обоснование, ключевые шаги и проверяемый вывод. Отвечай на языке пользователя."
+  },
   sonder: {
     label: "Sonder 1.3",
     model: "gemini-3.8-flash",
@@ -139,6 +144,14 @@ function decodeDataUrl(dataUrl) {
 }
 function safeText(value, max = 20000) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+function parseStoredMessage(content) {
+  if (typeof content !== "string" || !content.startsWith("{")) return { text: String(content || ""), images: [] };
+  try {
+    const parsed = JSON.parse(content);
+    if (parsed && parsed.__pa_message_v1 === true) return { text: typeof parsed.text === "string" ? parsed.text : "", images: Array.isArray(parsed.images) ? parsed.images.filter(x => typeof x === "string" && x.startsWith("data:image/")).slice(0, MAX_IMAGES) : [] };
+  } catch {}
+  return { text: content, images: [] };
 }
 
 const PROJECT_DELTA_SOURCE_URL = "https://gist.githubusercontent.com/pdvisual/b8a0219539847ec494b769d83682baeb/raw/9abc1c2803098634ad05e8dbc1301e34d95dbba9/gistfile1.txt";
@@ -330,7 +343,6 @@ async function handleApi(request, env, path) {
     try { images = Array.isArray(data.images) ? data.images.slice(0, MAX_IMAGES).map(decodeDataUrl) : []; }
     catch (e) { return error(e.message, 400); }
     if (mode === "sonder" && images.length === 0) return error("Для Sonder прикрепи хотя бы одно изображение.");
-    if (mode !== "sonder" && images.length) return error("Изображения доступны только в режиме Sonder.");
     if (!message && !images.length) return error("Напиши сообщение или прикрепи изображение.");
     if (mode === "sonder" && data.images?.length > MAX_IMAGES) return error("Можно прикрепить не более четырёх изображений.");
     let remaining = mode === "sonder" ? 50 : null;
@@ -350,7 +362,7 @@ async function handleApi(request, env, path) {
     const historyRows = await env.DB.prepare(
       "SELECT role, content FROM messages WHERE chat_id=? ORDER BY created_at DESC, rowid DESC LIMIT 20"
     ).bind(chatId).all();
-    const history = (historyRows.results || []).reverse().map(m => ({ role: m.role, content: m.content }));
+    const history = (historyRows.results || []).reverse().map(m => ({ role: m.role, ...parseStoredMessage(m.content) }));
     const currentParts = [{ text: message || "Проанализируй приложенное изображение подробно." }];
     for (const img of images) {
       const base64 = img.dataUrl.slice(img.dataUrl.indexOf(",") + 1);
@@ -358,7 +370,11 @@ async function handleApi(request, env, path) {
     }
     const contents = history.map(item => ({
       role: item.role === "assistant" ? "model" : "user",
-      parts: [{ text: item.content }]
+      parts: [{ text: item.text || " " }, ...item.images.map(dataUrl => {
+        const comma = dataUrl.indexOf(",");
+        const mime = dataUrl.slice(5, dataUrl.indexOf(";"));
+        return { inline_data: { mime_type: mime, data: dataUrl.slice(comma + 1) } };
+      })]
     }));
     contents.push({ role: "user", parts: currentParts });
     const userMemory = safeText(data.memory, 4000);
@@ -374,6 +390,7 @@ async function handleApi(request, env, path) {
         // Keep the primary model for the first attempt; use the faster Flash-Lite
         // fallback after a transient overload or timeout.
         const selectedModel = attempt === 0 ? MODES[mode].model : "gemini-3.5-flash-lite";
+        const thinkingLevel = mode === "axiom" ? "high" : "low";
         const geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + selectedModel + ":generateContent";
         const geminiRequest = {
           method: "POST",
@@ -382,8 +399,8 @@ async function handleApi(request, env, path) {
             systemInstruction: { parts: [{ text: systemPrompt }] },
             contents,
             generationConfig: {
-              maxOutputTokens: 1600,
-              ...(attempt === 0 ? { thinkingConfig: { thinkingLevel: "low" } } : {})
+              maxOutputTokens: mode === "axiom" ? 4096 : 1600,
+              thinkingConfig: { thinkingLevel }
             }
           })
         };
@@ -435,6 +452,10 @@ async function handleApi(request, env, path) {
       }
       const now = Math.floor(Date.now() / 1000);
       const userText = message || "Проанализируй приложенное изображение.";
+      const storedImageData = images.map(img => img.dataUrl);
+      const storedImageBytes = storedImageData.reduce((sum, value) => sum + value.length, 0);
+      if (storedImageBytes > 1450000) return error("После сжатия изображения всё ещё слишком велики для сохранения в истории. Уменьши количество или размер фото.", 413, "PA-106");
+      const storedUserContent = storedImageData.length ? JSON.stringify({ __pa_message_v1: true, text: userText, images: storedImageData }) : userText;
       if (!chat) {
         chatId = uuid();
         const title = userText.slice(0, 80) || "Анализ изображения";
@@ -443,7 +464,7 @@ async function handleApi(request, env, path) {
       }
       await env.DB.batch([
         env.DB.prepare("INSERT INTO messages (id,chat_id,role,content,created_at) VALUES (?,?,?,?,?)")
-          .bind(uuid(), chatId, "user", userText, now),
+          .bind(uuid(), chatId, "user", storedUserContent, now),
         env.DB.prepare("INSERT INTO messages (id,chat_id,role,content,created_at) VALUES (?,?,?,?,?)")
           .bind(uuid(), chatId, "assistant", reply.trim(), now + 1),
         env.DB.prepare("UPDATE chats SET updated_at=?, model=? WHERE id=? AND user_id=?")
