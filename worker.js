@@ -276,23 +276,26 @@ async function handleApi(request, env, path) {
     }));
     contents.push({ role: "user", parts: currentParts });
     try {
-      const geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + MODES[mode].model + ":generateContent";
-      const geminiRequest = {
-        method: "POST",
-        headers: { "x-goog-api-key": env.GEMINI_API_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: MODES[mode].prompt }] },
-          contents,
-          generationConfig: {
-            maxOutputTokens: 2000,
-            thinkingConfig: { thinkingLevel: "low" }
-          }
-        })
-      };
       let upstream;
       let result = {};
       let lastTimeout = false;
       for (let attempt = 0; attempt < 3; attempt++) {
+        // Keep the primary model for the first attempt; use the faster Flash-Lite
+        // fallback after a transient overload or timeout.
+        const selectedModel = attempt === 0 ? MODES[mode].model : "gemini-3.5-flash-lite";
+        const geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + selectedModel + ":generateContent";
+        const geminiRequest = {
+          method: "POST",
+          headers: { "x-goog-api-key": env.GEMINI_API_KEY, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: MODES[mode].prompt }] },
+            contents,
+            generationConfig: {
+              maxOutputTokens: 1600,
+              ...(attempt === 0 ? { thinkingConfig: { thinkingLevel: "low" } } : {})
+            }
+          })
+        };
         const attemptController = new AbortController();
         const attemptTimeout = setTimeout(() => attemptController.abort(), 27000);
         try {
@@ -300,11 +303,11 @@ async function handleApi(request, env, path) {
           result = await upstream.json().catch(() => ({}));
           lastTimeout = false;
           if (upstream.status !== 503 || attempt === 2) break;
-          console.warn("Gemini returned 503; retrying", attempt + 1);
+          console.warn("Gemini returned 503; retrying with fallback", selectedModel, attempt + 1);
         } catch (requestError) {
           if (requestError.name !== "AbortError" || attempt === 2) throw requestError;
           lastTimeout = true;
-          console.warn("Gemini request timed out; retrying", attempt + 1);
+          console.warn("Gemini request timed out; retrying with fallback", selectedModel, attempt + 1);
         } finally {
           clearTimeout(attemptTimeout);
         }
