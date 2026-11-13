@@ -463,6 +463,11 @@ async function handleApi(request, env, path) {
       ? "В этой конфигурации прямой веб-поиск временно недоступен. Не утверждай, что выполнял поиск, и не выдавай неподтверждённые текущие сведения за проверенные. Попроси пользователя включить веб-поиск отдельно или предоставь ответ с явным указанием ограничений."
       : "";
     const systemPrompt = [baseSystemPrompt, formattingRules, memoryPrompt, webSearchPrompt, pluginContext.join("\n\n")].filter(Boolean).join("\n\n");
+    const requestMessages = [
+      { role: "system", content: systemPrompt },
+      ...historyMessages,
+      { role: "user", content: currentMessageContent }
+    ];
     try {
       // Workers AI direct binding: no external API key required.
       // Gemma 4 supports text, vision, and function calling.
