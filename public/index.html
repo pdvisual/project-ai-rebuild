@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#101114"><title>Project AI</title>
-<link rel="stylesheet" href="/style.css?v=project-ai-no-imagegen-1"><script src="/app.js?v=project-ai-no-imagegen-1" defer></script>
+<link rel="stylesheet" href="/style.css?v=project-ai-no-imagegen-1"><script src="/app.js?v=project-ai-plugins-1" defer></script>
 </head>
 <body>
 <div id="authScreen" class="auth-screen">
@@ -74,6 +74,14 @@
     <div class="settings-head"><div><h3>Настройки Project AI</h3><p>Управляй поведением и внешним видом</p></div><button class="settings-close" value="close" aria-label="Закрыть">×</button></div>
     <section class="settings-section">
       <div class="setting-row"><div><strong>Анимации интерфейса</strong><small>Плавное появление сообщений, меню и окон</small></div><label class="switch"><input id="animationsToggle" type="checkbox" checked><span></span></label></div>
+    </section>
+    <section class="settings-section">
+      <h4 class="plugin-section-title">Плагины</h4>
+      <p class="settings-hint plugin-intro">Инструменты, которые Project AI может использовать в ответах.</p>
+      <div class="setting-row plugin-row"><div><strong>Web Search</strong><small>Поиск актуальной информации в интернете</small></div><label class="switch"><input id="pluginWebSearch" type="checkbox" checked><span></span></label></div>
+      <div class="setting-row plugin-row"><div><strong>Calculator</strong><small>Вычисление математических выражений</small></div><label class="switch"><input id="pluginCalculator" type="checkbox" checked><span></span></label></div>
+      <div class="setting-row plugin-row"><div><strong>GitHub</strong><small>Поиск публичных репозиториев и просмотр информации о них</small></div><label class="switch"><input id="pluginGithub" type="checkbox"><span></span></label></div>
+      <p class="settings-hint">Для расширенного доступа к приватным репозиториям можно будет отдельно добавить секрет GITHUB_TOKEN в Cloudflare. Не вставляй токены в чат.</p>
     </section>
     <section class="settings-section">
       <div class="setting-row"><div><strong>Память Project AI</strong><small>Учитывать сохранённые заметки в новых ответах</small></div><label class="switch"><input id="memoryToggle" type="checkbox"><span></span></label></div>
