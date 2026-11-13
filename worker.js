@@ -220,7 +220,7 @@ function parseStoredMessage(content) {
   if (typeof content !== "string" || !content.startsWith("{")) return { text: String(content || ""), images: [], sources: [] };
   try {
     const parsed = JSON.parse(content);
-    if (parsed && parsed.__pa_message_v1 === true) return { text: typeof parsed.text === "string" ? parsed.text : "", images: Array.isArray(parsed.images) ? parsed.images.filter(x => typeof x === "string" && x.startsWith("data:image/")).slice(0, MAX_IMAGES) : [], sources: Array.isArray(parsed.sources) ? parsed.sources.filter(x => x && typeof x.url === "string" && /^https?:\\/\\//i.test(x.url)).slice(0, 8) : [] };
+    if (parsed && parsed.__pa_message_v1 === true) return { text: typeof parsed.text === "string" ? parsed.text : "", images: Array.isArray(parsed.images) ? parsed.images.filter(x => typeof x === "string" && x.startsWith("data:image/")).slice(0, MAX_IMAGES) : [], sources: Array.isArray(parsed.sources) ? parsed.sources.filter(x => x && typeof x.url === "string" && /^https?:\/\//i.test(x.url)).slice(0, 8) : [] };
   } catch {}
   return { text: content, images: [], sources: [] };
 }
@@ -539,7 +539,7 @@ async function handleApi(request, env, path) {
       for (const chunk of (candidate?.groundingMetadata?.groundingChunks || [])) {
         const webSource = chunk?.web;
         const uri = typeof webSource?.uri === "string" ? webSource.uri : "";
-        if (!/^https?:\\/\\//i.test(uri) || seenSourceUrls.has(uri)) continue;
+        if (!/^https?:\/\//i.test(uri) || seenSourceUrls.has(uri)) continue;
         seenSourceUrls.add(uri);
         sources.push({ title: safeText(webSource.title, 180) || new URL(uri).hostname, url: uri });
         if (sources.length >= 8) break;
