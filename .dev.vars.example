@@ -1,1 +1,1 @@
-OPENROUTER_API_KEY=your_openrouter_api_key_here
+# No provider API key is required for Cloudflare Workers AI.
