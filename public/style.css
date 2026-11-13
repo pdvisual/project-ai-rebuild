@@ -190,3 +190,4 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 }
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 .no-animations *, .no-animations *:before, .no-animations *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+\n.message-text a{color:#d8d8d8;text-decoration:underline;text-decoration-color:#666;text-underline-offset:3px;overflow-wrap:anywhere;cursor:pointer}\n.message-text a:hover{color:#fff;text-decoration-color:#fff}\n.message-text a:focus-visible{outline:2px solid #aaa;outline-offset:3px;border-radius:2px}\n
