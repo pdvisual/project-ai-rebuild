@@ -3,6 +3,23 @@
 const $=id=>document.getElementById(id);
 const modes={force:"Force 1.1",apricity:"Apricity 1.2",sonder:"Sonder 1.3"};
 let mode=(()=>{try{const saved=localStorage.getItem("project-ai-mode");return ["force","apricity","sonder"].includes(saved)?saved:"apricity"}catch{return "apricity"}})(),authMode="login",chatId=null,chats=[],selectedFiles=[],busy=false,toastTimer=null,renameTarget=null;
+const settingsDefaults={animations:true,memory:false,notes:""};
+let settings=(()=>{try{return {...settingsDefaults,...JSON.parse(localStorage.getItem("project-ai-settings")||"{}")}}catch{return {...settingsDefaults}}})();
+function saveSettings(){try{localStorage.setItem("project-ai-settings",JSON.stringify(settings))}catch{}}
+function applySettings(){
+ document.body.classList.toggle("no-animations",!settings.animations);
+ $("animationsToggle").checked=!!settings.animations;
+ $("memoryToggle").checked=!!settings.memory;
+ $("memoryNotes").value=settings.notes||"";
+}
+$("settingsOpen").onclick=()=>{$("settingsDialog").showModal();applySettings()};
+$("settingsForm").onsubmit=e=>{
+ e.preventDefault();
+ settings={animations:$("animationsToggle").checked,memory:$("memoryToggle").checked,notes:$("memoryNotes").value.trim().slice(0,4000)};
+ saveSettings();applySettings();$("settingsDialog").close();toast("Настройки сохранены");
+};
+$("settingsDialog").addEventListener("click",e=>{if(e.target===$("settingsDialog"))$("settingsDialog").close()});
+applySettings();
 function toast(message){const el=$("toast");el.textContent=message;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),3800)}
 async function api(path,options={}) {
  const response=await fetch(path,{credentials:"same-origin",...options});
@@ -55,7 +72,7 @@ $("chatForm").onsubmit=async e=>{
  const requestTimeout=setTimeout(()=>requestController.abort(),100000);
  try{
   const images=await Promise.all(selectedFiles.map(x=>fileData(x.file)));
-  const data=await api("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode,message,chatId,images}),signal:requestController.signal});
+  const data=await api("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode,message,chatId,images,memory:settings.memory?settings.notes:""}),signal:requestController.signal});
   chatId=data.chatId;pending.textContent=data.reply;clearImages();
   if(mode==="sonder"&&data.remaining!==null)$("limitText").textContent=`Осталось запросов: ${data.remaining} из 50`;
   const existing=chats.find(c=>c.id===chatId);if(existing){existing.updated_at=Date.now()/1000}else chats.unshift({id:chatId,title:displayText.slice(0,80)||"Анализ изображения",model:mode});
