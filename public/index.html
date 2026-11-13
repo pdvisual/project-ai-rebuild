@@ -45,6 +45,7 @@
           <button class="model-option" type="button" data-mode="sonder" role="menuitemradio" aria-checked="false"><span class="model-option-icon">✳</span><span class="model-option-copy"><strong>Sonder 1.3</strong><small>Анализ изображений · до 50 запросов/24 ч</small></span><span class="model-check">✓</span></button>
         </div>
       </div>
+      <button id="settingsOpen" class="settings-open" type="button" aria-label="Настройки" title="Настройки">⚙</button>
       <div class="top-status"><i id="healthDot"></i><span id="healthText">Проверка</span></div>
     </header>
     <section id="messages" class="messages">
@@ -67,5 +68,20 @@
   </main>
 </div>
 <div id="toast" class="toast" role="status"></div>
+<dialog id="settingsDialog" class="dialog settings-dialog">
+  <form method="dialog" id="settingsForm">
+    <div class="settings-head"><div><h3>Настройки Project AI</h3><p>Управляй поведением и внешним видом</p></div><button class="settings-close" value="close" aria-label="Закрыть">×</button></div>
+    <section class="settings-section">
+      <div class="setting-row"><div><strong>Анимации интерфейса</strong><small>Плавное появление сообщений, меню и окон</small></div><label class="switch"><input id="animationsToggle" type="checkbox" checked><span></span></label></div>
+    </section>
+    <section class="settings-section">
+      <div class="setting-row"><div><strong>Память Project AI</strong><small>Учитывать сохранённые заметки в новых ответах</small></div><label class="switch"><input id="memoryToggle" type="checkbox"><span></span></label></div>
+      <label class="memory-label" for="memoryNotes">Что помощник должен помнить</label>
+      <textarea id="memoryNotes" class="memory-notes" rows="5" maxlength="4000" placeholder="Например: предпочитаю краткие ответы; мой проект называется Project Delta..."></textarea>
+      <p class="settings-hint">Заметки хранятся только в этом браузере. При включённой памяти их содержимое передаётся вместе с запросом, чтобы учитывать его в ответах. Не записывай пароли и секретные ключи.</p>
+    </section>
+    <div class="settings-actions"><button id="settingsSave" class="primary" value="save">Сохранить настройки</button></div>
+  </form>
+</dialog>
 <dialog id="renameDialog" class="dialog"><form method="dialog" id="renameForm"><h3>Переименовать чат</h3><input id="renameInput" maxlength="100" required><div class="dialog-actions"><button class="ghost" value="cancel">Отмена</button><button class="primary" id="renameSave" value="save">Сохранить</button></div></form></dialog>
 </body></html>
