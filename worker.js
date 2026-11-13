@@ -278,7 +278,8 @@ async function handleApi(request, env, path) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 90000);
     try {
-      const upstream = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + MODES[mode].model + ":generateContent", {
+      const geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + MODES[mode].model + ":generateContent";
+      const geminiRequest = {
         method: "POST",
         headers: { "x-goog-api-key": env.GEMINI_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -287,7 +288,14 @@ async function handleApi(request, env, path) {
           generation_config: { max_output_tokens: 4000 }
         }),
         signal: controller.signal
-      });
+      };
+      let upstream;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        upstream = await fetch(geminiUrl, geminiRequest);
+        if (upstream.status !== 503 || attempt === 2) break;
+        console.warn("Gemini is overloaded; retrying request", attempt + 1);
+        await new Promise(resolve => setTimeout(resolve, 700 * (attempt + 1)));
+      }
       const result = await upstream.json().catch(() => ({}));
       if (!upstream.ok) {
         const upstreamMessage = result?.error?.message || "unknown error";
@@ -304,7 +312,7 @@ async function handleApi(request, env, path) {
               500: "Внутренняя ошибка Google Gemini. Попробуй позже.",
               503: "Google Gemini временно недоступен."
             })[upstream.status] || `Ошибка Gemini API: ${upstreamMessage}`;
-        return error(friendly, 502);
+        return error(friendly, upstream.status === 503 ? 503 : upstream.status === 500 ? 502 : upstream.status);
       }
       const reply = (result?.candidates?.[0]?.content?.parts || [])
         .map(part => typeof part.text === "string" ? part.text : "")
