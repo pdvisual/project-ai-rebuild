@@ -488,6 +488,7 @@ async function handleApi(request, env, path) {
         chatRequest: {
           models: modelFallbacks,
           messages: requestMessages,
+          max_tokens: mode === "axiom" ? 4096 : 1600,
           ...(enabledPlugins.includes("web_search")
             ? { tools: [{ type: "openrouter:web_search" }] }
             : {})
