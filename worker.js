@@ -340,67 +340,6 @@ async function handleApi(request, env, path) {
     return json({ ok: true });
   }
 
-  if (path === "/api/generate-image" && request.method === "POST") {
-    if (!env.GEMINI_API_KEY) return error("Сервис генерации не настроен. Код PA-201.", 503, "PA-201");
-    let data;
-    try { data = await bodyJson(request); } catch { return error("Некорректный запрос генерации.", 400, "PA-101"); }
-    const prompt = safeText(data.prompt, 4000);
-    if (!prompt) return error("Опиши изображение, которое нужно создать.", 400, "PA-101");
-    const aspectRatio = ["1:1","3:2","2:3","16:9","9:16","4:3","3:4"].includes(data.aspectRatio) ? data.aspectRatio : "1:1";
-    let chatId = safeText(data.chatId, 80);
-    let chat = chatId ? await ownedChat(chatId, user, env) : null;
-    if (chatId && !chat) return error("Чат не найден или у тебя нет к нему доступа.", 404);
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 90000);
-      let upstream, result;
-      try {
-        upstream = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent", {
-          method: "POST",
-          headers: { "x-goog-api-key": env.GEMINI_API_KEY, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: { responseModalities: ["TEXT", "IMAGE"], imageConfig: { aspectRatio, imageSize: "1K" } }
-          }),
-          signal: controller.signal
-        });
-        result = await upstream.json().catch(() => ({}));
-      } finally { clearTimeout(timeout); }
-      if (!upstream.ok) {
-        const upstreamMessage = result?.error?.message || "unknown error";
-        console.error("Image generation failure", upstream.status, upstreamMessage);
-        const invalidKey = /API key not valid|API_KEY_INVALID|invalid api key/i.test(upstreamMessage);
-        const code = invalidKey || upstream.status === 401 || upstream.status === 403 ? "PA-202" : upstream.status === 429 ? "PA-203" : upstream.status === 503 ? "PA-204" : "PA-299";
-        const message = code === "PA-202" ? "Сервис генерации отклонил учётные данные. Код PA-202." : code === "PA-203" ? "Лимит запросов генерации исчерпан. Попробуй позже. Код PA-203." : code === "PA-204" ? "Сервис генерации временно перегружен. Повтори позже. Код PA-204." : "Не удалось создать изображение. Код PA-299.";
-        return error(message, upstream.status === 429 ? 429 : upstream.status === 503 ? 503 : 502, code);
-      }
-      const parts = result?.candidates?.[0]?.content?.parts || [];
-      const imagePart = parts.find(part => part.inlineData?.data || part.inline_data?.data);
-      if (!imagePart) return error("Сервис не вернул изображение. Измени описание и попробуй снова. Код PA-206.", 502, "PA-206");
-      const imageData = imagePart.inlineData || imagePart.inline_data;
-      const mimeValue = imageData.mimeType || imageData.mime_type;
-      const mime = ["image/png","image/jpeg","image/webp"].includes(mimeValue) ? mimeValue : "image/png";
-      const imageUrl = "data:" + mime + ";base64," + imageData.data;
-      if (imageUrl.length > 1450000) return error("Изображение получилось слишком большим для сохранения в истории. Попробуй другое описание. Код PA-106.", 413, "PA-106");
-      const now = Math.floor(Date.now() / 1000);
-      if (!chat) {
-        chatId = uuid();
-        await env.DB.prepare("INSERT INTO chats (id,user_id,title,model,created_at,updated_at) VALUES (?,?,?,?,?,?)")
-          .bind(chatId, user.id, ("Изображение: " + prompt).slice(0, 100), "apricity", now, now).run();
-      }
-      const assistantContent = JSON.stringify({ __pa_message_v1: true, text: "Готово. Вот созданное изображение.", images: [imageUrl] });
-      await env.DB.batch([
-        env.DB.prepare("INSERT INTO messages (id,chat_id,role,content,created_at) VALUES (?,?,?,?,?)").bind(uuid(), chatId, "user", prompt, now),
-        env.DB.prepare("INSERT INTO messages (id,chat_id,role,content,created_at) VALUES (?,?,?,?,?)").bind(uuid(), chatId, "assistant", assistantContent, now + 1),
-        env.DB.prepare("UPDATE chats SET updated_at=? WHERE id=? AND user_id=?").bind(now + 1, chatId, user.id)
-      ]);
-      return json({ chatId, image: imageUrl, prompt, aspectRatio });
-    } catch (e) {
-      console.error("image generation handler failed", e);
-      if (e.name === "AbortError") return error("Генерация заняла слишком много времени. Попробуй ещё раз. Код PA-205.", 504, "PA-205");
-      return error("Не удалось создать или сохранить изображение. Код PA-299.", 502, "PA-299");
-    }
-  }
 
   if (path === "/api/chat" && request.method === "POST") {
     if (!env.GEMINI_API_KEY) return error("Сервис ответов не настроен. Код PA-201.", 503, "PA-201");
