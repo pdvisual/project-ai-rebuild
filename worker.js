@@ -29,7 +29,10 @@ function json(data, status = 200, headers = {}) {
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...headers }
   });
 }
-function error(message, status = 400) { return json({ error: message }, status); }
+function error(message, status = 400, code = null) {
+  const diagnosticCode = code || ({400:"PA-101",401:"PA-102",403:"PA-103",404:"PA-104",409:"PA-105",413:"PA-106",429:"PA-203",500:"PA-301",502:"PA-299",503:"PA-201",504:"PA-205"}[status] || "PA-999");
+  return json({ error: message, code: diagnosticCode }, status);
+}
 function uuid() { return crypto.randomUUID(); }
 function bytesToHex(bytes) { return [...new Uint8Array(bytes)].map(b => b.toString(16).padStart(2, "0")).join(""); }
 function base64url(bytes) {
@@ -224,7 +227,7 @@ async function buildProjectDeltaContext(userMessage) {
 async function handleApi(request, env, path) {
   if (!env.DB) return error("На Worker не настроен D1 binding DB.", 500);
   if (path === "/api/health" && request.method === "GET") {
-    return json({ ok: true, database: true, geminiConfigured: Boolean(env.GEMINI_API_KEY) });
+    return json({ ok: true, database: true, serviceConfigured: Boolean(env.GEMINI_API_KEY) });
   }
   if (path === "/api/register" && request.method === "POST") {
     let data;
@@ -318,7 +321,7 @@ async function handleApi(request, env, path) {
     return json({ ok: true });
   }
   if (path === "/api/chat" && request.method === "POST") {
-    if (!env.GEMINI_API_KEY) return error("На Cloudflare не задан Secret GEMINI_API_KEY.", 503);
+    if (!env.GEMINI_API_KEY) return error("Сервис ответов не настроен. Код PA-201.", 503, "PA-201");
     let data;
     try { data = await bodyJson(request); } catch { return error("Не удалось прочитать запрос. Проверь размер сообщения и изображений.", 400); }
     const mode = MODES[data.mode] ? data.mode : "apricity";
@@ -387,40 +390,44 @@ async function handleApi(request, env, path) {
           result = await upstream.json().catch(() => ({}));
           lastTimeout = false;
           if (upstream.status !== 503 || attempt === 2) break;
-          console.warn("Gemini returned 503; retrying with fallback", selectedModel, attempt + 1);
+          console.warn("Upstream returned 503; retrying with fallback", selectedModel, attempt + 1);
         } catch (requestError) {
           if (requestError.name !== "AbortError" || attempt === 2) throw requestError;
           lastTimeout = true;
-          console.warn("Gemini request timed out; retrying with fallback", selectedModel, attempt + 1);
+          console.warn("Upstream request timed out; retrying with fallback", selectedModel, attempt + 1);
         } finally {
           clearTimeout(attemptTimeout);
         }
         await new Promise(resolve => setTimeout(resolve, 800 * (attempt + 1)));
       }
-      if (lastTimeout) throw new DOMException("Gemini request timed out", "AbortError");
+      if (lastTimeout) throw new DOMException("Response service timed out", "AbortError");
       if (!upstream.ok) {
         const upstreamMessage = result?.error?.message || "unknown error";
-        console.error("Gemini returned", upstream.status, upstreamMessage);
+        console.error("Upstream response failure", upstream.status, upstreamMessage);
         const invalidKey = /API key not valid|API_KEY_INVALID|invalid api key/i.test(upstreamMessage);
         const friendly = invalidKey
-          ? "Google Gemini отклонил API-ключ. Проверь Secret GEMINI_API_KEY."
+          ? "Сервис ответов отклонил учётные данные. Обратись к администратору. Код PA-202."
           : ({
-              400: "Gemini не принял запрос. Проверь формат запроса и доступ к модели.",
-              401: "Google Gemini отклонил API-ключ. Проверь Secret GEMINI_API_KEY.",
-              403: "Нет доступа к Gemini API. Проверь ключ и доступность API в Google AI Studio.",
-              404: "Модель Gemini не найдена или недоступна для этого API-ключа.",
-              429: "Исчерпан бесплатный лимит Gemini или превышена частота запросов. Попробуй позже.",
-              500: "Внутренняя ошибка Google Gemini. Попробуй позже.",
-              503: "Google Gemini временно недоступен."
-            })[upstream.status] || `Ошибка Gemini API: ${upstreamMessage}`;
-        return error(friendly, upstream.status === 503 ? 503 : upstream.status === 500 ? 502 : upstream.status);
+              400: "Сервис не принял формат запроса. Код PA-206.",
+              401: "Сервис отклонил учётные данные. Код PA-202.",
+              403: "Нет доступа к сервису ответов. Код PA-202.",
+              404: "Конфигурация сервиса недоступна. Код PA-206.",
+              429: "Слишком много запросов. Подожди немного и повтори. Код PA-203.",
+              500: "Временная внутренняя ошибка сервиса. Код PA-299.",
+              503: "Сервис временно перегружен. Повтори запрос позже. Код PA-204."
+            })[upstream.status] || "Ошибка внешнего сервиса. Код PA-299.";
+        const diagnosticCode = invalidKey || upstream.status === 401 || upstream.status === 403 ? "PA-202"
+          : upstream.status === 429 ? "PA-203"
+          : upstream.status === 503 ? "PA-204"
+          : upstream.status === 400 || upstream.status === 404 ? "PA-206" : "PA-299";
+        return error(friendly, upstream.status === 503 ? 503 : upstream.status === 500 ? 502 : upstream.status, diagnosticCode);
       }
       const reply = (result?.candidates?.[0]?.content?.parts || [])
         .map(part => typeof part.text === "string" ? part.text : "")
         .join("");
       if (typeof reply !== "string" || !reply.trim()) {
-        console.error("Gemini returned no text", result?.promptFeedback?.blockReason || result?.candidates?.[0]?.finishReason || "empty response");
-        return error("Gemini не вернул текстовый ответ. Возможно, запрос был заблокирован фильтром безопасности.", 502);
+        console.error("Response service returned no text", result?.promptFeedback?.blockReason || result?.candidates?.[0]?.finishReason || "empty response");
+        return error("Сервис вернул пустой ответ или запрос был ограничен фильтром безопасности. Код PA-206.", 502, "PA-206");
       }
       const now = Math.floor(Date.now() / 1000);
       const userText = message || "Проанализируй приложенное изображение.";
@@ -449,8 +456,8 @@ async function handleApi(request, env, path) {
       return json({ chatId, reply: reply.trim(), remaining, mode });
     } catch (e) {
       console.error("chat handler failed", e);
-      if (e.name === "AbortError") return error("Gemini не ответил после трёх попыток по 27 секунд. Попробуй ещё раз чуть позже.", 504);
-      return error("Не удалось выполнить запрос. Проверь Cloudflare Logs и доступность Gemini.", 502);
+      if (e.name === "AbortError") return error("Сервис не ответил за отведённое время. Попробуй ещё раз. Код PA-205.", 504, "PA-205");
+      return error("Не удалось обработать запрос. Код PA-299.", 502, "PA-299");
     }
   }
   return error("API-маршрут не найден.", 404);
