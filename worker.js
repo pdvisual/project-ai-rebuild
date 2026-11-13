@@ -356,6 +356,9 @@ async function handleApi(request, env, path) {
     }
     const totalImageBytes = images.reduce((sum, img) => sum + Math.floor((img.dataUrl.length - img.dataUrl.indexOf(",") - 1) * 3 / 4), 0);
     if (totalImageBytes > MAX_TOTAL_IMAGE_BYTES) return error("Общий размер изображений не должен превышать 16 МБ.", 400);
+    const storedImageData = images.map(img => img.dataUrl);
+    const storedImageBytes = storedImageData.reduce((sum, value) => sum + value.length, 0);
+    if (storedImageBytes > 1450000) return error("После сжатия изображения всё ещё слишком велики для сохранения в истории. Уменьши количество или размер фото.", 413, "PA-106");
     let chatId = safeText(data.chatId, 80);
     let chat = chatId ? await ownedChat(chatId, user, env) : null;
     if (chatId && !chat) return error("Чат не найден или у тебя нет к нему доступа.", 404);
@@ -452,9 +455,6 @@ async function handleApi(request, env, path) {
       }
       const now = Math.floor(Date.now() / 1000);
       const userText = message || "Проанализируй приложенное изображение.";
-      const storedImageData = images.map(img => img.dataUrl);
-      const storedImageBytes = storedImageData.reduce((sum, value) => sum + value.length, 0);
-      if (storedImageBytes > 1450000) return error("После сжатия изображения всё ещё слишком велики для сохранения в истории. Уменьши количество или размер фото.", 413, "PA-106");
       const storedUserContent = storedImageData.length ? JSON.stringify({ __pa_message_v1: true, text: userText, images: storedImageData }) : userText;
       if (!chat) {
         chatId = uuid();
