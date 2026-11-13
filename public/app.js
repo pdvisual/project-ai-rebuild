@@ -48,7 +48,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModelMenu()});
 function renderWelcome(){const w=document.createElement("div");w.className="welcome";w.innerHTML='<div class="welcome-icon">P</div><h1>Чем могу помочь?</h1><p>Выбери режим и начни общение с Project AI.</p>';$("messages").append(w)}
 function renderLinkedText(container,content){
  const text=String(content??"");
- const pattern=/\\[([^\\]\\n]+)\\]\\((https?:\\/\\/[^\\s)]+)\\)|(https?:\\/\\/[^\\s<]+)/gi;
+ const pattern=/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<]+)/gi;
  let cursor=0,match;
  while((match=pattern.exec(text))){
   if(match.index>cursor)container.append(document.createTextNode(text.slice(cursor,match.index)));
