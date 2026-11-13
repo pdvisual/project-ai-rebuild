@@ -81,6 +81,7 @@ $("message").addEventListener("input",e=>{e.target.style.height="auto";e.target.
 $("chatForm").onsubmit=async e=>{
  e.preventDefault();if(busy)return;const message=$("message").value.trim();if(!message)return;
  busy=true;document.querySelectorAll("[data-mode]").forEach(b=>b.disabled=true);$("send").disabled=true;$("send").textContent="Думаю...";
+ bubble(message,"user");
  $("message").value="";$("message").style.height="auto";
  const requestController=new AbortController();
  const requestTimeout=setTimeout(()=>requestController.abort(),100000);
