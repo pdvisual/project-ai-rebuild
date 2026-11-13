@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#101114"><title>Project AI</title>
-<link rel="stylesheet" href="/style.css?v=project-ai-imagegen-1"><script src="/app.js?v=project-ai-imagegen-1" defer></script>
+<link rel="stylesheet" href="/style.css?v=project-ai-no-imagegen-1"><script src="/app.js?v=project-ai-no-imagegen-1" defer></script>
 </head>
 <body>
 <div id="authScreen" class="auth-screen">
@@ -46,7 +46,6 @@
           <button class="model-option" type="button" data-mode="sonder" role="menuitemradio" aria-checked="false"><span class="model-option-icon">◉</span><span class="model-option-copy"><strong>Sonder 1.3</strong><small>Анализ изображений · до 50 запросов/24 ч</small></span><span class="model-check">✓</span></button>
         </div>
       </div>
-      <button id="imageGenOpen" class="image-gen-open" type="button" title="Создать изображение">✧ <span>Создать изображение</span></button>
       <button id="settingsOpen" class="settings-open" type="button" aria-label="Настройки" title="Настройки">⚙</button>
       <div class="top-status"><i id="healthDot"></i><span id="healthText">Проверка</span></div>
     </header>
@@ -83,19 +82,6 @@
       <p class="settings-hint">Заметки хранятся только в этом браузере. При включённой памяти их содержимое передаётся вместе с запросом, чтобы учитывать его в ответах. Не записывай пароли и секретные ключи.</p>
     </section>
     <div class="settings-actions"><button id="settingsSave" class="primary" value="save">Сохранить настройки</button></div>
-  </form>
-</dialog>
-<dialog id="imageGenDialog" class="dialog image-gen-dialog">
-  <form id="imageGenForm">
-    <div class="settings-head"><div><h3>Создать изображение</h3><p>Опиши, что хочешь увидеть</p></div><button class="settings-close" id="imageGenClose" type="button" aria-label="Закрыть">×</button></div>
-    <label class="memory-label" for="imageGenPrompt">Описание изображения</label>
-    <textarea id="imageGenPrompt" class="memory-notes" rows="5" maxlength="4000" placeholder="Например: футуристический город ночью, неоновые вывески, кинематографичный свет..." required></textarea>
-    <div class="image-gen-options"><label>Формат
-      <select id="imageGenRatio" class="image-gen-select">
-        <option value="1:1">Квадрат 1:1</option><option value="3:2">Горизонтальный 3:2</option><option value="2:3">Вертикальный 2:3</option><option value="16:9">Широкий 16:9</option><option value="9:16">Сторис 9:16</option><option value="4:3">Фото 4:3</option><option value="3:4">Портрет 3:4</option>
-      </select></label></div>
-    <p class="settings-hint">Картинка появится в чате и сохранится в истории. Использование зависит от доступной квоты API.</p>
-    <div class="settings-actions"><button id="imageGenSubmit" class="primary" type="submit">Создать изображение</button></div>
   </form>
 </dialog>
 <dialog id="renameDialog" class="dialog"><form method="dialog" id="renameForm"><h3>Переименовать чат</h3><input id="renameInput" maxlength="100" required><div class="dialog-actions"><button class="ghost" value="cancel">Отмена</button><button class="primary" id="renameSave" value="save">Сохранить</button></div></form></dialog>
