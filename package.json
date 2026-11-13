@@ -11,7 +11,5 @@
   "devDependencies": {
     "wrangler": "^4.0.0"
   },
-  "dependencies": {
-    "@openrouter/sdk": "^1.5.100"
-  }
+  "dependencies": {}
 }
