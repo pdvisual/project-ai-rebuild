@@ -345,14 +345,14 @@ async function tavilyWebSearch(query, env) {
   const data = await response.json();
   const results = Array.isArray(data.results) ? data.results : [];
   if (!results.length) return "TAVILY SEARCH: по запросу не найдено результатов. Не выдумывай источники и обозначь, что подтверждений недостаточно.";
-  return "РЕЗУЛЬТАТЫ НЕЗАВИСИМОГО ВЕБ-ПОИСКА TAVILY (поисковый API, не ответ другой нейросети). Ссылки ниже — реальные URL из результатов.\\n\\n" +
+  return "РЕЗУЛЬТАТЫ НЕЗАВИСИМОГО ВЕБ-ПОИСКА TAVILY (поисковый API, не ответ другой нейросети). Ссылки ниже — реальные URL из результатов.\n\n" +
     results.slice(0, 8).map((item, index) => {
-      const body = String(item.raw_content || item.content || "").replace(/\\s+/g, " ").trim().slice(0, 2600);
+      const body = String(item.raw_content || item.content || "").replace(/\s+/g, " ").trim().slice(0, 2600);
       return "[" + (index + 1) + "] " + String(item.title || "Без заголовка").slice(0, 240) +
-        "\\nURL: " + String(item.url || "") +
-        (item.published_date ? "\\nДата публикации: " + item.published_date : "") +
-        "\\nСодержание: " + body;
-    }).join("\\n\\n");
+        "\nURL: " + String(item.url || "") +
+        (item.published_date ? "\nДата публикации: " + item.published_date : "") +
+        "\nСодержание: " + body;
+    }).join("\n\n");
 }
 
 async function fetchSearchResultPage(url, allowedUrls) {
