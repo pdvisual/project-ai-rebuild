@@ -560,3 +560,9 @@ body.new-year .mode-card.active{border-color:#82ad98}
 .project-list{display:grid;gap:3px;max-height:150px;overflow:auto}
 .project-item{min-height:32px;justify-content:flex-start;padding:0 9px;border-color:transparent;background:transparent;color:#999;font-size:12px;font-weight:500;text-align:left;overflow:hidden;text-overflow:ellipsis}
 .project-item:hover,.project-item.active{background:#191919;border-color:#292929;color:#eee}
+
+/* Sidebar support link */
+.report-bug-link{display:grid;gap:4px;padding:11px 12px;border:1px solid #354553;border-radius:12px;background:linear-gradient(135deg,#1b242d,#121a21);text-decoration:none;transition:border-color .15s,background .15s}
+.report-bug-link:hover{border-color:#8b9eae;background:linear-gradient(135deg,#263440,#18232c)}
+.report-bug-title{color:#e4edf4;font-size:12px;font-weight:700}
+.report-bug-user{color:#9eacb8;font-size:11px}
