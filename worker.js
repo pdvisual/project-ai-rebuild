@@ -111,9 +111,9 @@ function json(data, status = 200, headers = {}) {
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...headers }
   });
 }
-function error(message, status = 400, code = null) {
+function error(message, status = 400, code = null, extra = {}) {
   const diagnosticCode = code || ({400:"PA-101",401:"PA-102",403:"PA-103",404:"PA-104",409:"PA-105",413:"PA-106",429:"PA-203",500:"PA-301",502:"PA-299",503:"PA-201",504:"PA-205"}[status] || "PA-999");
-  return json({ error: message, code: diagnosticCode }, status);
+  return json({ error: message, code: diagnosticCode, ...extra }, status);
 }
 function uuid() { return crypto.randomUUID(); }
 function bytesToHex(bytes) { return [...new Uint8Array(bytes)].map(b => b.toString(16).padStart(2, "0")).join(""); }
@@ -794,7 +794,9 @@ async function handleApi(request, env, path) {
       if (e?.name === "AbortError" || /timeout/i.test(e?.message || "")) {
         return error("ИИ-провайдеры не ответили вовремя. Попробуй ещё раз. Код PA-205.", 504, "PA-205");
       }
-      return error("Сейчас все подключённые ИИ-провайдеры недоступны. Попробуй позже. Код PA-204.", 503, "PA-204");
+      return error("Сейчас все подключённые ИИ-провайдеры недоступны. Попробуй позже. Код PA-204.", 503, "PA-204", {
+        diagnostics: Array.isArray(e?.providerFailures) ? e.providerFailures.slice(0, 5) : []
+      });
     }
   }
   return error("API-маршрут не найден.", 404);
