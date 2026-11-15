@@ -2,42 +2,11 @@ const COOKIE_NAME = "pa_session";
 const SESSION_SECONDS = 60 * 60 * 24 * 30;
 const MAX_JSON_BYTES = 24 * 1024 * 1024;
 
-const MODES = {
-  velqi: {
-    label: "Velqi",
-    maxTokens: 1200,
-    reasoning: false,
-    providers: ["cloudflare", "mistral", "groq", "sambanova", "openrouter"],
-    prompt: "Ты Velqi — лёгкая и быстрая версия CLYRO. Решай повседневные вопросы, отвечай просто, быстро и по делу. Не усложняй простые задачи. Если задача сложная, честно обозначь ограничения. Отвечай на языке пользователя."
-  },
-  nuvex: {
-    label: "Nuvex",
-    maxTokens: 2200,
-    reasoning: false,
-    providers: ["mistral", "cloudflare", "groq", "sambanova", "openrouter"],
-    prompt: "Ты Nuvex — универсальная версия CLYRO. Помогай с обучением, письмом, кодом, объяснениями, планированием и анализом обычной сложности. Давай сбалансированные, практичные ответы. Отвечай на языке пользователя."
-  },
-  qorvex: {
-    label: "Qorvex",
-    maxTokens: 3200,
-    reasoning: true,
-    providers: ["groq", "sambanova", "mistral", "cloudflare", "openrouter"],
-    prompt: "Ты Qorvex — версия CLYRO для сложных задач и усиленного мышления. Проверяй предположения, разбирай зависимости, ищи противоречия и крайние случаи. Объясняй ключевые выводы, но не раскрывай скрытые внутренние рассуждения. Отвечай на языке пользователя."
-  },
-  zenvor: {
-    label: "Zenvor",
-    maxTokens: 4096,
-    reasoning: true,
-    providers: ["sambanova", "groq", "mistral", "cloudflare", "openrouter"],
-    prompt: "Ты Zenvor — продвинутая версия CLYRO для программирования, исследований, технического анализа и многоэтапных задач. Тщательно проверяй логику, альтернативы, граничные случаи и фактическую точность. Не выдавай догадки за факты. Не раскрывай скрытые внутренние рассуждения. Отвечай на языке пользователя."
-  },
-  vaelix: {
-    label: "Vaelix",
-    maxTokens: 6000,
-    reasoning: true,
-    providers: ["openrouter", "sambanova", "groq", "mistral", "cloudflare"],
-    prompt: "Ты Vaelix — флагманская версия CLYRO для максимально сложных задач. Учитывай весь контекст, разбивай комплексные задачи на этапы, проверяй предположения, вычисления, противоречия и крайние случаи. При наличии нескольких надёжных вариантов сравни их и выбери лучший. Давай полный, точный и проверяемый результат, не раскрывая скрытые внутренние рассуждения. Отвечай на языке пользователя."
-  }
+const OSMIUM = {
+  label: "OSMIUM 1.0",
+  maxTokens: 6000,
+  reasoning: true,
+  prompt: "Ты OSMIUM 1.0 — единственная официальная модель CLYRO. Ты универсальный ИИ-помощник: точно отвечай на вопросы, помогай с программированием, анализом, обучением, планированием и творческими задачами. Отвечай на языке пользователя. Не выдумывай факты, источники, результаты действий или возможности. Если данных недостаточно, прямо скажи об этом и задай один уточняющий вопрос. Не раскрывай скрытые внутренние рассуждения; показывай только краткие выводы и полезное объяснение."
 };
 
 
@@ -356,84 +325,84 @@ function buildImagePrompt(message) {
 
 
 const TEXT_PROVIDER_PLAN = [
-  { id: "groq", label: "Groq", envKey: "GROQ_API_KEY", url: "https://api.groq.com/openai/v1/chat/completions", model: "openai/gpt-oss-120b", contextWindow: 131072 },
-  { id: "cloudflare", label: "Workers AI", model: "@cf/google/gemma-4-26b-a4b-it", contextWindow: 131072 },
-  { id: "sambanova", label: "SambaNova", envKey: "SAMBANOVA_API_KEY", url: "https://api.sambanova.ai/v1/chat/completions", model: "DeepSeek-V3.1", contextWindow: 131072 },
-  { id: "mistral", label: "Mistral", envKey: "MISTRAL_API_KEY", url: "https://api.mistral.ai/v1/chat/completions", model: "mistral-small-latest", contextWindow: 131072 },
-  { id: "openrouter", label: "OpenRouter", envKey: "OPENROUTER_API_KEY", url: "https://openrouter.ai/api/v1/chat/completions", model: "openrouter/free", contextWindow: null }
+  {
+    id: "groq",
+    label: "Groq",
+    envKey: "GROQ_API_KEY",
+    url: "https://api.groq.com/openai/v1/chat/completions",
+    model: "openai/gpt-oss-120b",
+    contextWindow: 131072
+  }
 ];
 
 function getTextProviderStatus(env) {
-  return TEXT_PROVIDER_PLAN.map(provider => ({
-    id: provider.id,
-    name: provider.label,
-    configured: provider.id === "cloudflare" ? Boolean(env.AI) : Boolean(env[provider.envKey])
-  }));
+  return [{
+    id: "groq",
+    name: "Groq",
+    configured: Boolean(env.GROQ_API_KEY)
+  }];
 }
 
-async function callTextProvider(env, messages, maxTokens, tools = [], providerOrder = null) {
-  const failures = [];
-  const orderedProviders = providerOrder
-    ? [...providerOrder.map(id => TEXT_PROVIDER_PLAN.find(provider => provider.id === id)).filter(Boolean), ...TEXT_PROVIDER_PLAN.filter(provider => !providerOrder.includes(provider.id))]
-    : TEXT_PROVIDER_PLAN;
-  for (const provider of orderedProviders) {
-    if (provider.id === "cloudflare" ? !env.AI : !env[provider.envKey]) continue;
-    try {
-      let completion;
-      if (provider.id === "cloudflare") {
-        completion = await env.AI.run(provider.model, {
-          messages,
-          max_tokens: maxTokens,
-          ...(tools.length ? { tools } : {})
-        }, tools.length ? { gateway: { id: "default" } } : undefined);
-      } else {
-        const payload = { model: provider.model, messages, max_tokens: maxTokens };
-        if (tools.length) {
-          payload.tools = tools;
-          payload.tool_choice = "auto";
-        }
-        const response = await fetch(provider.url, {
-          method: "POST",
-          headers: {
-            "Authorization": "Bearer " + env[provider.envKey],
-            "Content-Type": "application/json",
-            ...(provider.id === "openrouter" ? { "X-Title": "CLYRO" } : {})
-          },
-          body: JSON.stringify(payload),
-          signal: AbortSignal.timeout(25000)
-        });
-        if (!response.ok) {
-          failures.push(provider.id + ":" + response.status);
-          console.warn("AI provider unavailable", provider.id, response.status);
-          continue;
-        }
-        completion = await response.json();
-      }
-      const message = completion?.choices?.[0]?.message;
-      const hasText = typeof message?.content === "string" ||
-        (Array.isArray(message?.content) && message.content.some(part => typeof part?.text === "string"));
-      const hasTools = Array.isArray(message?.tool_calls) && message.tool_calls.length > 0;
-      const hasLegacyText = typeof completion?.response === "string" && completion.response.length > 0;
-      if (!hasText && !hasTools && !hasLegacyText) {
-        failures.push(provider.id + ":empty");
-        continue;
-      }
-      return {
-        completion,
-        provider: provider.label,
-        providerId: provider.id,
-        model: completion?.model || provider.model,
-        contextWindow: provider.contextWindow
-      };
-    } catch (e) {
-      failures.push(provider.id + ":" + (e?.name === "AbortError" ? "timeout" : "network"));
-      console.warn("AI provider request failed", provider.id, e?.name || "error");
-    }
+function reasoningEffortFor(level) {
+  return level === "low" ? "low" : level === "medium" ? "medium" : "high";
+}
+
+async function callTextProvider(env, messages, maxTokens, tools = [], providerOrder = null, reasoningEffort = "medium") {
+  const provider = TEXT_PROVIDER_PLAN[0];
+  if (!env.GROQ_API_KEY) {
+    const failure = new Error("GROQ_API_KEY is not configured.");
+    failure.status = 503;
+    throw failure;
   }
-  const failure = new Error("All configured AI providers are unavailable.");
-  failure.status = 503;
-  failure.providerFailures = failures;
-  throw failure;
+
+  const payload = {
+    model: provider.model,
+    messages,
+    max_completion_tokens: maxTokens,
+    reasoning_effort: reasoningEffort,
+    include_reasoning: false
+  };
+  if (tools.length) {
+    payload.tools = tools;
+    payload.tool_choice = "auto";
+  }
+
+  const response = await fetch(provider.url, {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + env.GROQ_API_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(25000)
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    const failure = new Error("Groq API HTTP " + response.status + (detail ? ": " + detail.slice(0, 500) : ""));
+    failure.status = response.status;
+    failure.providerFailures = ["groq:" + response.status];
+    throw failure;
+  }
+
+  const completion = await response.json();
+  const message = completion?.choices?.[0]?.message;
+  const hasText = typeof message?.content === "string" ||
+    (Array.isArray(message?.content) && message.content.some(part => typeof part?.text === "string"));
+  const hasTools = Array.isArray(message?.tool_calls) && message.tool_calls.length > 0;
+  if (!hasText && !hasTools) {
+    const failure = new Error("Groq returned an empty completion.");
+    failure.status = 502;
+    throw failure;
+  }
+
+  return {
+    completion,
+    provider: provider.label,
+    providerId: provider.id,
+    model: completion?.model || provider.model,
+    contextWindow: provider.contextWindow
+  };
 }
 
 async function handleApi(request, env, path) {
@@ -502,7 +471,7 @@ async function handleApi(request, env, path) {
     let data;
     try { data = await bodyJson(request); } catch { return error("Некорректный запрос."); }
     const title = safeText(data.title, 100) || "Новый чат";
-    const model = MODES[data.model] ? data.model : "nuvex";
+    const model = "osmium";
     const id = uuid();
     const now = Math.floor(Date.now() / 1000);
     await env.DB.prepare("INSERT INTO chats (id,user_id,title,model,created_at,updated_at) VALUES (?,?,?,?,?,?)")
@@ -539,7 +508,7 @@ async function handleApi(request, env, path) {
     if (!getTextProviderStatus(env).some(item => item.configured)) return error("Сервис ещё не готов к работе. Попробуй позже. Код CL-201.", 503, "CL-201");
     let data;
     try { data = await bodyJson(request); } catch { return error("Не удалось прочитать запрос. Проверь размер сообщения и изображений.", 400); }
-    const mode = MODES[data.mode] ? data.mode : "nuvex";
+    const mode = "osmium";
     const thinkingLevel = ["low", "medium", "high", "super_high"].includes(data.thinkingLevel) ? data.thinkingLevel : "high";
     const message = safeText(data.message, 20000);
     if (Array.isArray(data.images) && data.images.length) return error("Загрузка изображений отключена.", 400, "CL-107");
@@ -561,7 +530,7 @@ async function handleApi(request, env, path) {
     const pluginContext = [];
     if (enabledPlugins.includes("calculator")) { const value = calculateExpression(message); if (value !== null) pluginContext.push("РЕЗУЛЬТАТ ПЛАГИНА CALCULATOR: " + message + " = " + value); }
     if (enabledPlugins.includes("github")) pluginContext.push(await githubPluginContext(message, env));
-    const baseSystemPrompt = MODES[mode].prompt;
+    const baseSystemPrompt = OSMIUM.prompt;
     const thinkingPrompts = {
       low: "УРОВЕНЬ РАЗМЫШЛЕНИЯ: LOW. Отвечай быстро и прямо, выполняй простые задачи без лишних деталей. Проверяй базовую корректность.",
       medium: "УРОВЕНЬ РАЗМЫШЛЕНИЯ: MEDIUM. Учитывай контекст, проверь ключевые предположения и дай сбалансированный ответ.",
@@ -577,7 +546,7 @@ async function handleApi(request, env, path) {
       ? "Если для ответа нужны актуальные сведения, новости, релизы, цены, документация или проверка фактов, используй инструмент web_search. Не выдумывай результаты поиска. Опирайся на найденные источники и указывай ссылки."
       : "";
     const systemPrompt = [baseSystemPrompt, thinkingPrompt, formattingRules, memoryPrompt, webSearchPrompt, pluginContext.join("\n\n")].filter(Boolean).join("\n\n");
-    const deepThinking = MODES[mode].reasoning && ["high", "super_high"].includes(thinkingLevel);
+    const deepThinking = OSMIUM.reasoning && ["high", "super_high"].includes(thinkingLevel);
     // Keep the full conversation payload available to the Workers AI call.
     const requestMessages = [
       { role: "system", content: systemPrompt },
@@ -639,11 +608,11 @@ async function handleApi(request, env, path) {
       let finalRequestMessages = requestMessages;
       let lastRoute = null;
       if (deepThinking) {
-        const prepTokens = Math.min(MODES[mode].maxTokens, thinkingLevel === "super_high" ? 1200 : 700);
+        const prepTokens = Math.min(OSMIUM.maxTokens, thinkingLevel === "super_high" ? 1200 : 700);
         const prepRoute = await callTextProvider(env, [
           { role: "system", content: systemPrompt + "\n\nПОДГОТОВИТЕЛЬНЫЙ ЭТАП: не давай пользователю ответ. Составь краткую рабочую записку: цель задачи, важные исходные данные, допущения, что нужно проверить и возможные крайние случаи. Не раскрывай скрытую цепочку рассуждений. Будь конкретным и кратким." },
           { role: "user", content: currentMessageContent }
-        ], prepTokens, [], MODES[mode].providers);
+        ], prepTokens, [], ["groq"], reasoningEffortFor(thinkingLevel));
         lastRoute = prepRoute;
         const prep = prepRoute.completion;
         const prepText = typeof prep?.choices?.[0]?.message?.content === "string"
@@ -657,8 +626,8 @@ async function handleApi(request, env, path) {
         }
       }
       lastRoute = await callTextProvider(env, finalRequestMessages,
-        Math.min(MODES[mode].maxTokens, ({ low: 1000, medium: 1600, high: 2600, super_high: 6000 })[thinkingLevel]),
-        webSearchEnabled ? webSearchTools : [], MODES[mode].providers);
+        Math.min(OSMIUM.maxTokens, ({ low: 1000, medium: 1600, high: 2600, super_high: 6000 })[thinkingLevel]),
+        webSearchEnabled ? webSearchTools : [], ["groq"], reasoningEffortFor(thinkingLevel));
       let completion = lastRoute.completion;
       const initialMessage = completion?.choices?.[0]?.message;
       const toolCalls = completion?.tool_calls || initialMessage?.tool_calls || [];
@@ -699,7 +668,7 @@ async function handleApi(request, env, path) {
                 metadata: searchResults?.metadata || {}
               })
             }
-          ], Math.min(MODES[mode].maxTokens, ({ low: 1000, medium: 1600, high: 2600, super_high: 6000 })[thinkingLevel]), [], MODES[mode].providers);
+          ], Math.min(OSMIUM.maxTokens, ({ low: 1000, medium: 1600, high: 2600, super_high: 6000 })[thinkingLevel]), [], ["groq"], reasoningEffortFor(thinkingLevel));
           completion = lastRoute.completion;
         }
       }
@@ -715,7 +684,7 @@ async function handleApi(request, env, path) {
             { role: "system", content: systemPrompt + "\n\nФИНАЛЬНАЯ НЕЗАВИСИМАЯ ПРОВЕРКА: перед тобой черновик ответа. Проверь фактическую точность, логику, полноту, противоречия и крайние случаи. Исправь обнаруженные проблемы и верни только готовый ответ пользователю. Не перечисляй скрытые рассуждения. Не добавляй факты, которых нет в исходных данных. Если использовался веб-поиск, не приписывай источникам то, чего в них нет, и сохрани уместные URL." },
             { role: "user", content: currentMessageContent },
             { role: "assistant", content: draftText }
-          ], Math.min(MODES[mode].maxTokens, 6000), [], MODES[mode].providers);
+          ], Math.min(OSMIUM.maxTokens, 6000), [], ["groq"], reasoningEffortFor(thinkingLevel));
           completion = lastRoute.completion;
         }
       }
@@ -741,7 +710,7 @@ async function handleApi(request, env, path) {
       const actualModel = lastRoute?.model || "unknown";
       const actualProvider = lastRoute?.provider || "unknown";
       const contextWindowTokens = lastRoute?.contextWindow || null;
-      const outputTokenBudget = Math.min(MODES[mode].maxTokens,
+      const outputTokenBudget = Math.min(OSMIUM.maxTokens,
         ({ low: 1000, medium: 1600, high: 2600, super_high: 6000 })[thinkingLevel]);
       const promptTokensUsed = Number.isFinite(completion?.usage?.prompt_tokens)
         ? completion.usage.prompt_tokens : null;
@@ -790,11 +759,17 @@ async function handleApi(request, env, path) {
       });
     } catch (e) {
       const status = Number(e?.status || e?.statusCode || e?.response?.status || 0);
-      console.error("AI provider chain failed", status || "unknown", e?.providerFailures || e?.name || "unknown error");
-      if (e?.name === "AbortError" || /timeout/i.test(e?.message || "")) {
-        return error("Время ожидания ответа истекло. Попробуй ещё раз. Код CL-205.", 504, "CL-205");
+      console.error("OSMIUM Groq request failed", status || "unknown", e?.providerFailures || e?.name || "unknown error");
+      if (status === 429) {
+        return error("OSMIUM временно достиг лимита Groq. Подожди немного и попробуй снова. Код CL-203.", 429, "CL-203");
       }
-      return error("Сервис временно не может обработать запрос. Попробуй позже. Код CL-204.", 503, "CL-204");
+      if (status === 401 || status === 403) {
+        return error("Ключ Groq не принят. Проверь секрет GROQ_API_KEY в Cloudflare. Код CL-202.", 503, "CL-202");
+      }
+      if (e?.name === "AbortError" || /timeout/i.test(e?.message || "")) {
+        return error("Время ожидания ответа OSMIUM истекло. Попробуй ещё раз. Код CL-205.", 504, "CL-205");
+      }
+      return error("OSMIUM временно не может обработать запрос через Groq. Попробуй позже. Код CL-204.", 503, "CL-204");
     }
   }
   return error("API-маршрут не найден.", 404);
