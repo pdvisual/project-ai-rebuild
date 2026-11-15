@@ -1,1 +1,2 @@
-# No provider API key is required for Cloudflare Workers AI.
+# Required: Groq API key for the only official CLYRO model, OSMIUM 1.0.
+GROQ_API_KEY=replace-with-your-groq-api-key
