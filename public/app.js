@@ -47,7 +47,7 @@ $("modelPicker").addEventListener("click",e=>{e.preventDefault();const open=$("m
 $("modelMenu").addEventListener("click",e=>{const option=e.target.closest("[data-mode]");if(!option)return;e.preventDefault();setMode(option.dataset.mode)});
 document.addEventListener("click",e=>{if(!e.target.closest(".model-picker-wrap"))closeModelMenu()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModelMenu()});
-function renderWelcome(){const w=document.createElement("div");w.className="welcome";w.innerHTML='<div class="welcome-icon">P</div><h1>Чем могу помочь?</h1><p>Выбери режим и начни общение с Project AI.</p>';$("messages").append(w)}
+function renderWelcome(){const w=document.createElement("div");w.className="welcome";w.innerHTML='<div class="welcome-icon">P</div><h1>Чем могу помочь?</h1><p>Выбери режим и начни общение с CLYRO.</p>';$("messages").append(w)}
 function renderLinkedText(container,content){
  const text=String(content??"");
  const pattern=/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<]+)/gi;
@@ -70,7 +70,7 @@ function renderLinkedText(container,content){
 }
 function attachGeneratedImage(element,imageDataURI){
  if(typeof imageDataURI!=="string"||!imageDataURI.startsWith("data:image/"))return;
- const image=document.createElement("img");image.className="generated-image";image.src=imageDataURI;image.alt="Изображение, созданное Project AI";image.loading="lazy";
+ const image=document.createElement("img");image.className="generated-image";image.src=imageDataURI;image.alt="Изображение, созданное CLYRO";image.loading="lazy";
  element.append(image);
 }
 function bubble(content,role,isError=false,sources=[]){const w=document.querySelector(".welcome");if(w)w.remove();const el=document.createElement("article");el.className="message "+role+(isError?" error":"");const textNode=document.createElement("div");textNode.className="message-text";renderLinkedText(textNode,content);el.append(textNode);if(sources.length){const sourceBox=document.createElement("div");sourceBox.className="message-sources";const heading=document.createElement("strong");heading.textContent="Источники";sourceBox.append(heading);sources.forEach((source,index)=>{if(!source||typeof source.url!=="string"||!/^https?:\/\//i.test(source.url))return;const link=document.createElement("a");link.href=source.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent=(index+1)+". "+(source.title||source.url);sourceBox.append(link)});if(sourceBox.querySelector("a"))el.append(sourceBox)}$("messages").append(el);$("messages").scrollTop=$("messages").scrollHeight;return el}
