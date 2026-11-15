@@ -285,3 +285,11 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline-color:#d
 
 /* Generated images appear inline in the conversation */
 .generated-image{display:block;width:min(100%,720px);height:auto;max-height:78vh;object-fit:contain;margin:14px 0 2px;border:1px solid #594522;border-radius:14px;background:#111;box-shadow:0 12px 36px #0008}
+
+/* CLYRO brand */
+.brand{gap:9px;color:#f2d38b;letter-spacing:.02em}
+.brand span{color:#d7ad59}
+.brand-logo{width:29px;height:29px;object-fit:contain;flex:0 0 auto;filter:drop-shadow(0 0 7px rgba(215,173,89,.18))}
+.auth-brand .brand-logo{width:42px;height:42px}
+.auth-brand{font-size:25px}
+.welcome-icon{background:transparent!important;color:transparent!important;background-image:url('/clyro-logo.svg')!important;background-position:center!important;background-size:contain!important;background-repeat:no-repeat!important;border:0!important;box-shadow:none!important}
