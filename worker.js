@@ -751,6 +751,11 @@ async function handleApi(request, env, path) {
       return json({
         chatId, reply: reply.trim(), mode, sources, provider: actualProvider, model: actualModel,
         tokenUsage: {
+          providerId: lastRoute?.providerId || "unknown",
+          provider: actualProvider,
+          promptTokensUsed: Number.isFinite(Number(completion?.usage?.prompt_tokens)) ? Number(completion.usage.prompt_tokens) : null,
+          completionTokensUsed: Number.isFinite(Number(completion?.usage?.completion_tokens)) ? Number(completion.usage.completion_tokens) : null,
+          totalTokensUsed: Number.isFinite(Number(completion?.usage?.total_tokens)) ? Number(completion.usage.total_tokens) : null,
           contextWindow: contextWindowTokens,
           promptTokens: promptTokensUsed,
           outputBudget: outputTokenBudget,
