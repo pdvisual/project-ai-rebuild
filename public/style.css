@@ -187,90 +187,90 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 
 /* Project AI — warm black & gold visual refresh */
 :root{
-  --accent:#d6a647;
-  --gold:#d6a647;
-  --gold-bright:#e7bd68;
+  --accent:#aebdca;
+  --gold:#aebdca;
+  --gold-bright:#dce5ec;
   --line:#332b1d;
   --line-soft:#242018;
 }
 body,.app,.main{background:radial-gradient(ellipse at 72% 38%,rgba(177,133,42,.075),transparent 36%),#090909}
-.sidebar{background:#0e0e0e;border-right-color:#29251d}
+.sidebar{background:#0e0e0e;border-right-color:#29343f}
 .brand{font-family:Manrope,Inter,sans-serif;color:#eee5d4}
-.brand span{color:#d6a647}
+.brand span{color:#aebdca}
 .new-chat,.primary,.send-button{
-  background:linear-gradient(135deg,#bd8d35,#e4b95e);
-  color:#171108;border-color:#c99a42;font-weight:750;
-  box-shadow:0 5px 20px #bd8d3518
+  background:linear-gradient(135deg,#8294a3,#dce5ec);
+  color:#101820;border-color:#8294a3;font-weight:750;
+  box-shadow:0 5px 20px #8294a318
 }
 .new-chat:hover,.primary:hover,.send-button:hover{
-  background:linear-gradient(135deg,#d4a448,#f0ca75);
-  border-color:#e7bd68;color:#171108
+  background:linear-gradient(135deg,#c3d0da,#e7edf2);
+  border-color:#dce5ec;color:#101820
 }
-.topbar{background:#0b0b0acc;border-bottom-color:#29251d}
+.topbar{background:#0b0b0acc;border-bottom-color:#29343f}
 .model-picker:hover,.model-picker[aria-expanded=true],
-.model-option:hover,.model-option.selected{background:#211a0e;border-color:#6b5125}
-.model-option.selected .model-option-icon{border-color:#80602a;color:#e7bd68}
+.model-option:hover,.model-option.selected{background:#1b242d;border-color:#465461}
+.model-option.selected .model-option-icon{border-color:#718494;color:#dce5ec}
 .model-option-icon{border-color:#393020}
-.model-check{color:#e7bd68}
-.mode-heading{color:#e8dfcf}
+.model-check{color:#dce5ec}
+.mode-heading{color:#edf2f6}
 .picker-chevron,.provider-note{color:#948a78}
-.settings-open:hover{color:#e7bd68}
-.top-status i{background:#d6a647;box-shadow:0 0 10px #d6a64770}
+.settings-open:hover{color:#dce5ec}
+.top-status i{background:#aebdca;box-shadow:0 0 10px #aebdca70}
 .messages{scrollbar-color:#493a20 transparent}
-.welcome-icon{background:linear-gradient(145deg,#3a2b13,#17130c);border-color:#715522;color:#dfaf51;box-shadow:0 0 35px #cfa13e1f}
+.welcome-icon{background:linear-gradient(145deg,#3a2b13,#17130c);border-color:#526271;color:#dce5ec;box-shadow:0 0 35px #9aabba1f}
 .welcome h1{color:#f2ede3}
-.message.user{background:#211b11;border-color:#40321a;color:#f0e4ce}
-.message.assistant{background:linear-gradient(135deg,#151512,#111110);border:1px solid #302d26}
-.message.assistant:before{border-color:#594522;background:#211a0e;color:#dfaf51}
-.composer{background:#141311;border-color:#57451f;box-shadow:0 10px 35px #0005,0 0 0 1px #d1a33e0a}
-.composer:focus-within{border-color:#b48a3c;box-shadow:0 0 0 3px #d6a64712,0 10px 35px #0005}
+.message.user{background:#1b242d;border-color:#465461;color:#edf2f6}
+.message.assistant{background:linear-gradient(135deg,#151512,#111110);border:1px solid #303b46}
+.message.assistant:before{border-color:#465461;background:#1b242d;color:#dce5ec}
+.composer{background:#141311;border-color:#465461;box-shadow:0 10px 35px #0005,0 0 0 1px #9aabba0a}
+.composer:focus-within{border-color:#91a4b5;box-shadow:0 0 0 3px #aebdca12,0 10px 35px #0005}
 .composer textarea::placeholder{color:#777169}
-.attach{color:#c19a4d}
-.attach:hover{color:#f0c66e;background:#211a0e}
-.chat-row:hover,.chat-row.active{background:#211b11}
-.chat-open:hover,.chat-row.active .chat-open{background:#211b11;border-color:#3b2e18;color:#e8c16b}
-.chat-actions button:hover{color:#d6a647}
-.account{border-top-color:#29251d}
+.attach{color:#aab8c4}
+.attach:hover{color:#e3ebf1;background:#1b242d}
+.chat-row:hover,.chat-row.active{background:#1b242d}
+.chat-open:hover,.chat-row.active .chat-open{background:#1b242d;border-color:#3b2e18;color:#dce5ec}
+.chat-actions button:hover{color:#aebdca}
+.account{border-top-color:#29343f}
 .auth-screen{background:radial-gradient(circle at 50% 38%,rgba(190,145,54,.11),transparent 34%),#090909}
 .auth-card{background:linear-gradient(145deg,#171613,#10100f);border-color:#393020;box-shadow:0 24px 90px #0009,0 0 55px #bd8c3010}
 .auth-tabs{border-color:#302b20;background:#0c0c0b}
-.auth-tabs button.active{background:#302515;border-color:#6c5124;color:#f0c66e}
+.auth-tabs button.active{background:#302515;border-color:#6c5124;color:#e3ebf1}
 .field input,.dialog input,.memory-notes{background:#0b0b0a;border-color:#39352d}
-.field input:focus,.dialog input:focus,.memory-notes:focus{border-color:#d6a647}
+.field input:focus,.dialog input:focus,.memory-notes:focus{border-color:#aebdca}
 .dialog,.settings-dialog{background:#151411;border-color:#554322}
 .dialog::backdrop{background:#000b}
-.settings-section,.account{border-color:#29251d}
-.switch input:checked+span{background:#d6a647}
-.switch input:checked+span:before{background:#171108}
-.toast{background:#211b11;border-color:#594522;color:#f0d49b}
-.message-text a{color:#e3bd70;text-decoration-color:#80602a}
-.message-text a:hover{color:#f5d99c;text-decoration-color:#e7bd68}
-button:focus-visible,input:focus-visible,textarea:focus-visible{outline-color:#d6a647}
+.settings-section,.account{border-color:#29343f}
+.switch input:checked+span{background:#aebdca}
+.switch input:checked+span:before{background:#101820}
+.toast{background:#1b242d;border-color:#465461;color:#f0d49b}
+.message-text a{color:#dce5ec;text-decoration-color:#718494}
+.message-text a:hover{color:#f0f5f8;text-decoration-color:#dce5ec}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline-color:#aebdca}
 @media(max-width:760px){
  .sidebar{box-shadow:0 0 0 100vmax #000c}
- .icon-button{background:#211a0e;border-color:#49391e}
+ .icon-button{background:#1b242d;border-color:#49391e}
 }
 
 
 /* Thinking level selector — adapted from the updated Project AI concept */
 .composer{padding:15px 17px 13px;border-radius:25px;background:linear-gradient(135deg,#211e19,#171613);border-color:#514027;box-shadow:0 16px 45px #0008,inset 0 1px 0 #ffffff0c}
-.composer:focus-within{border-color:#b58a43;box-shadow:0 0 0 3px #d6a64716,0 16px 45px #0008}
+.composer:focus-within{border-color:#91a4b5;box-shadow:0 0 0 3px #aebdca16,0 16px 45px #0008}
 .composer textarea{font-size:15px;min-height:46px}
 .composer-bottom{align-items:flex-end}
 .composer-left{display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-width:0}
 .thinking-control{display:grid;gap:6px;min-width:min(300px,62vw)}
-.thinking-label{display:flex;justify-content:space-between;align-items:center;padding:0 5px;color:#8d806b;font-size:9px;font-weight:750;letter-spacing:1.05px}
-.thinking-label strong{color:#e8cd95;font-size:11px;letter-spacing:0}
+.thinking-label{display:flex;justify-content:space-between;align-items:center;padding:0 5px;color:#9eacb8;font-size:9px;font-weight:750;letter-spacing:1.05px}
+.thinking-label strong{color:#e0e8ee;font-size:11px;letter-spacing:0}
 .thinking-options{display:flex;align-items:center;gap:3px;padding:4px;border:1px solid #4a4134;border-radius:24px;background:#11110f}
 .thinking-option{flex:1;min-height:34px;padding:0 8px;border:1px solid transparent;border-radius:18px;background:transparent;color:#888174;font-size:10px;font-weight:650;white-space:nowrap}
-.thinking-option:hover{background:#211a0e;border-color:#594522;color:#e8c16b}
-.thinking-option.active{border-color:#b98b3c;background:linear-gradient(135deg,#f4d996,#c18b36);color:#171108;box-shadow:0 2px 10px #d6a64730}
+.thinking-option:hover{background:#1b242d;border-color:#465461;color:#dce5ec}
+.thinking-option.active{border-color:#718494;background:linear-gradient(135deg,#dce5ec,#8294a3);color:#101820;box-shadow:0 2px 10px #aebdca30}
 .thinking-option:disabled{opacity:.5}
 .limit-text{font-size:10px}
-.send-button{width:46px;min-width:46px;height:46px;min-height:46px;border-radius:15px;background:linear-gradient(135deg,#f8dda0,#c18b36);color:#171108}
-.send-button:hover{background:linear-gradient(135deg,#ffe7b0,#d5a047);color:#171108}
+.send-button{width:46px;min-width:46px;height:46px;min-height:46px;border-radius:15px;background:linear-gradient(135deg,#e2eaf0,#8294a3);color:#101820}
+.send-button:hover{background:linear-gradient(135deg,#f0f5f8,#a4b4c1);color:#101820}
 .welcome{margin-top:clamp(55px,13vh,125px)}
-.welcome-icon{width:68px;height:68px;border-radius:22px;font-size:34px;background:linear-gradient(145deg,#3c3020,#17140f);border-color:#715522;color:#f1d086;box-shadow:0 0 45px #d6a64722,inset 0 1px 0 #f4d18b35}
+.welcome-icon{width:68px;height:68px;border-radius:22px;font-size:34px;background:linear-gradient(145deg,#303d49,#17140f);border-color:#526271;color:#e3edf5;box-shadow:0 0 45px #aebdca22,inset 0 1px 0 #ffffff35}
 .welcome h1{font-size:clamp(29px,4vw,39px);letter-spacing:-1.35px}
 @media(max-width:760px){
  .composer{padding:10px 10px 9px}
@@ -284,11 +284,11 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline-color:#d
 
 
 /* Generated images appear inline in the conversation */
-.generated-image{display:block;width:min(100%,720px);height:auto;max-height:78vh;object-fit:contain;margin:14px 0 2px;border:1px solid #594522;border-radius:14px;background:#111;box-shadow:0 12px 36px #0008}
+.generated-image{display:block;width:min(100%,720px);height:auto;max-height:78vh;object-fit:contain;margin:14px 0 2px;border:1px solid #465461;border-radius:14px;background:#111;box-shadow:0 12px 36px #0008}
 
 /* CLYRO brand */
 .brand{gap:9px;color:#f2d38b;letter-spacing:.02em}
-.brand span{color:#d7ad59}
+.brand span{color:#c1ced9}
 .brand-logo{width:29px;height:29px;object-fit:contain;flex:0 0 auto;filter:drop-shadow(0 0 7px rgba(215,173,89,.18))}
 .auth-brand .brand-logo{width:42px;height:42px}
 .auth-brand{font-size:25px}
@@ -451,3 +451,17 @@ button:hover{
   .sidebar,.topbar,.composer,.auth-card{animation:titanium-enter .55s ease-out both}
   @keyframes titanium-enter{from{opacity:.75;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
 }
+
+
+/* Final CLYRO titanium finish — neutral silver only, no gold */
+:root{--accent:#c7d2dc}
+.brand,.brand span{color:#dce5ec!important}
+.brand-logo{filter:drop-shadow(0 0 9px rgba(172,194,211,.22))!important}
+.auth-screen{background:radial-gradient(ellipse at 50% 20%,rgba(130,153,173,.12),transparent 42%),linear-gradient(145deg,#090d12,#05070a 70%)}
+.auth-card{border-color:#465461}
+.message-text a{color:#dce5ec;text-decoration-color:#718494}
+.message-text a:hover{color:#fff;text-decoration-color:#dce5ec}
+.generated-image{border-color:#465461}
+.toast{background:#1b242d;border-color:#526271;color:#e3ebf1}
+.settings-open:hover,.chat-actions button:hover{color:#dce5ec}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline-color:#aebdca}
