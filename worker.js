@@ -2,6 +2,12 @@ const COOKIE_NAME = "pa_session";
 const SESSION_SECONDS = 60 * 60 * 24 * 30;
 const MAX_JSON_BYTES = 24 * 1024 * 1024;
 
+const COBALT = {
+  label: "COBALT 1.1",
+  maxTokens: 6000,
+  reasoning: true,
+  prompt: "Ты COBALT 1.1 — игровой специалист CLYRO по ULTRAKILL, Counter-Strike 2, Dota 2, Project Delta (Roblox), Arena Breakout и PUBG. Отвечай на языке пользователя, по-русски если он пишет по-русски. Помогай с механиками, тактикой, настройками, билдами, тренировками и разбором ошибок. Не выдумывай оружие, предметы, способности, карты, характеристики, цены, патчноуты или игровые механики. Отделяй проверенные факты от предположений и советов. Для актуальных патчей и меты используй веб-поиск, если он доступен; иначе честно обозначай неопределённость. Учитывай режим, ранг, карту, роль, платформу и стиль игры, если это важно. Давай практичный ответ: рекомендация, почему она работает, как выполнить и возможная альтернатива. Не помогай с читами, взломом аккаунтов, вредоносными скриптами и обходом античита. Если вопрос не об этих играх, отвечай нормально, не навязывая игровую тему."
+};
 const OSMIUM = {
   label: "OSMIUM 1.0",
   maxTokens: 6000,
@@ -471,7 +477,7 @@ async function handleApi(request, env, path) {
     let data;
     try { data = await bodyJson(request); } catch { return error("Некорректный запрос."); }
     const title = safeText(data.title, 100) || "Новый чат";
-    const model = "osmium";
+    const model = data.model === "cobalt" ? "cobalt" : "osmium";
     const id = uuid();
     const now = Math.floor(Date.now() / 1000);
     await env.DB.prepare("INSERT INTO chats (id,user_id,title,model,created_at,updated_at) VALUES (?,?,?,?,?,?)")
@@ -508,7 +514,8 @@ async function handleApi(request, env, path) {
     if (!getTextProviderStatus(env).some(item => item.configured)) return error("Сервис ещё не готов к работе. Попробуй позже. Код CL-201.", 503, "CL-201");
     let data;
     try { data = await bodyJson(request); } catch { return error("Не удалось прочитать запрос. Проверь размер сообщения и изображений.", 400); }
-    const mode = "osmium";
+    const mode = data.mode === "cobalt" ? "cobalt" : "osmium";
+    const modelConfig = mode === "cobalt" ? COBALT : OSMIUM;
     const thinkingLevel = ["low", "medium", "high", "super_high"].includes(data.thinkingLevel) ? data.thinkingLevel : "high";
     const message = safeText(data.message, 20000);
     if (Array.isArray(data.images) && data.images.length) return error("Загрузка изображений отключена.", 400, "CL-107");
@@ -530,7 +537,7 @@ async function handleApi(request, env, path) {
     const pluginContext = [];
     if (enabledPlugins.includes("calculator")) { const value = calculateExpression(message); if (value !== null) pluginContext.push("РЕЗУЛЬТАТ ПЛАГИНА CALCULATOR: " + message + " = " + value); }
     if (enabledPlugins.includes("github")) pluginContext.push(await githubPluginContext(message, env));
-    const baseSystemPrompt = OSMIUM.prompt;
+    const baseSystemPrompt = modelConfig.prompt;
     const thinkingPrompts = {
       low: "УРОВЕНЬ РАЗМЫШЛЕНИЯ: LOW. Отвечай быстро и прямо, выполняй простые задачи без лишних деталей. Проверяй базовую корректность.",
       medium: "УРОВЕНЬ РАЗМЫШЛЕНИЯ: MEDIUM. Учитывай контекст, проверь ключевые предположения и дай сбалансированный ответ.",
@@ -546,7 +553,7 @@ async function handleApi(request, env, path) {
       ? "Если для ответа нужны актуальные сведения, новости, релизы, цены, документация или проверка фактов, используй инструмент web_search. Не выдумывай результаты поиска. Опирайся на найденные источники и указывай ссылки."
       : "";
     const systemPrompt = [baseSystemPrompt, thinkingPrompt, formattingRules, memoryPrompt, webSearchPrompt, pluginContext.join("\n\n")].filter(Boolean).join("\n\n");
-    const deepThinking = OSMIUM.reasoning && ["high", "super_high"].includes(thinkingLevel);
+    const deepThinking = modelConfig.reasoning && ["high", "super_high"].includes(thinkingLevel);
     // Keep the full conversation payload available to the Workers AI call.
     const requestMessages = [
       { role: "system", content: systemPrompt },
@@ -608,7 +615,7 @@ async function handleApi(request, env, path) {
       let finalRequestMessages = requestMessages;
       let lastRoute = null;
       if (deepThinking) {
-        const prepTokens = Math.min(OSMIUM.maxTokens, thinkingLevel === "super_high" ? 1200 : 700);
+        const prepTokens = Math.min(modelConfig.maxTokens, thinkingLevel === "super_high" ? 1200 : 700);
         const prepRoute = await callTextProvider(env, [
           { role: "system", content: systemPrompt + "\n\nПОДГОТОВИТЕЛЬНЫЙ ЭТАП: не давай пользователю ответ. Составь краткую рабочую записку: цель задачи, важные исходные данные, допущения, что нужно проверить и возможные крайние случаи. Не раскрывай скрытую цепочку рассуждений. Будь конкретным и кратким." },
           { role: "user", content: currentMessageContent }
@@ -759,17 +766,17 @@ async function handleApi(request, env, path) {
       });
     } catch (e) {
       const status = Number(e?.status || e?.statusCode || e?.response?.status || 0);
-      console.error("OSMIUM Groq request failed", status || "unknown", e?.providerFailures || e?.name || "unknown error");
+      console.error(modelConfig.label + " Groq request failed", status || "unknown", e?.providerFailures || e?.name || "unknown error");
       if (status === 429) {
-        return error("OSMIUM временно достиг лимита Groq. Подожди немного и попробуй снова. Код CL-203.", 429, "CL-203");
+        return error(modelConfig.label + " временно достиг лимита Groq. Подожди немного и попробуй снова. Код CL-203.", 429, "CL-203");
       }
       if (status === 401 || status === 403) {
         return error("Ключ Groq не принят. Проверь секрет GROQ_API_KEY в Cloudflare. Код CL-202.", 503, "CL-202");
       }
       if (e?.name === "AbortError" || /timeout/i.test(e?.message || "")) {
-        return error("Время ожидания ответа OSMIUM истекло. Попробуй ещё раз. Код CL-205.", 504, "CL-205");
+        return error("Время ожидания ответа " + modelConfig.label + " истекло. Попробуй ещё раз. Код CL-205.", 504, "CL-205");
       }
-      return error("OSMIUM временно не может обработать запрос через Groq. Попробуй позже. Код CL-204.", 503, "CL-204");
+      return error(modelConfig.label + " временно не может обработать запрос через Groq. Попробуй позже. Код CL-204.", 503, "CL-204");
     }
   }
   return error("API-маршрут не найден.", 404);
