@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#050505"><title>Project AI</title>
-<link rel="stylesheet" href="/style.css?v=project-ai-gold-refresh-1"><script src="/app.js?v=project-ai-gold-refresh-1" defer></script>
+<link rel="stylesheet" href="/style.css?v=project-ai-gold-refresh-2"><script src="/app.js?v=project-ai-gold-refresh-2" defer></script>
 </head>
 <body>
 <div id="authScreen" class="auth-screen">
@@ -57,7 +57,15 @@
         <textarea id="message" rows="1" maxlength="20000" placeholder="Напиши сообщение..."></textarea>
         <div class="composer-bottom">
           <div class="composer-left">
-
+            <div class="thinking-control" role="group" aria-label="Уровень размышления">
+              <span class="thinking-label">THINKING MODE <strong id="thinkingCurrent">High</strong></span>
+              <div class="thinking-options">
+                <button class="thinking-option" type="button" data-thinking="low" aria-pressed="false">Low</button>
+                <button class="thinking-option" type="button" data-thinking="medium" aria-pressed="false">Medium</button>
+                <button class="thinking-option active" type="button" data-thinking="high" aria-pressed="true">High</button>
+                <button class="thinking-option" type="button" data-thinking="super_high" aria-pressed="false">Super High</button>
+              </div>
+            </div>
             <span id="limitText" class="limit-text"></span>
           </div>
           <button id="send" class="send-button" type="submit">Отправить ↑</button>
