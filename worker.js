@@ -306,6 +306,37 @@ function isImageGenerationRequest(message) {
     || /(?:картинк\w*|изображени\w*|фото|иллюстраци\w*|обложк\w*|логотип\w*|аватар\w*)\s+(?:в стиле|с изображением|где|на которой|с надписью)/i.test(text);
 }
 
+
+function buildImagePrompt(message) {
+  const original = String(message || "").trim().slice(0, 1800);
+  const lower = original.toLowerCase();
+  const subjectRules = [
+    { re: /(?:рыж(?:ий|его|ую|ая|ие|их)\s+)?(?:кот(?:а|ик|ёнок|енка)?|кошк(?:а|у|и)|котёнок)/i, subject: "a cat" },
+    { re: /(?:сер(?:ый|ого|ую|ая)\s+)(?:кот(?:а|ик)?|кошк(?:а|у)?)/i, subject: "a gray cat" },
+    { re: /(?:бел(?:ый|ого|ую|ая)\s+)(?:кот(?:а|ик)?|кошк(?:а|у)?)/i, subject: "a white cat" },
+    { re: /(?:чёрн(?:ый|ого|ую|ая)|черн(?:ый|ого|ую|ая))\s+(?:кот(?:а|ик)?|кошк(?:а|у)?)/i, subject: "a black cat" },
+    { re: /(?:рыж(?:ий|его|ую|ая)|оранжев(?:ый|ого|ую|ая))\s+(?:кот(?:а|ик)?|кошк(?:а|у)?)/i, subject: "an orange ginger cat" },
+    { re: /(?:собак(?:а|у|и)|пёс|пса|щен(?:ок|ка))/i, subject: "a dog" },
+    { re: /(?:машин(?:а|у|ы)|автомобил(?:ь|я|ь)) /i, subject: "a car" },
+    { re: /(?:человек|мужчин(?:а|у)|женщин(?:а|у)|девушк(?:а|у)|парень|парня)/i, subject: "a person" }
+  ];
+  let subject = "";
+  for (const rule of subjectRules) {
+    if (rule.re.test(lower)) { subject = rule.subject; break; }
+  }
+  const color = /рыж|оранжев/i.test(lower) ? "orange ginger" :
+    /сер(?:ый|ого|ую|ая)/i.test(lower) ? "gray" :
+    /бел(?:ый|ого|ую|ая)/i.test(lower) ? "white" :
+    /чёрн|черн/i.test(lower) ? "black" : "";
+  if (subject === "a cat" && color) subject = "a " + color + " cat";
+  const core = subject
+    ? "The ONLY main subject must be " + subject + ". Show this subject clearly and accurately. Do not replace it with another animal or a person."
+    : "Follow the user's requested main subject exactly. Do not invent or substitute a different main subject.";
+  return "Create one image based strictly on the user's request. " + core +
+    " Preserve all requested colors, count, objects, actions, and setting. Do not add people, decorative props, flowers, fruit, or unrelated objects unless requested. " +
+    "User's original request: " + original;
+}
+
 async function handleApi(request, env, path) {
   if (!env.DB) return error("На Worker не настроен D1 binding DB.", 500);
   if (path === "/api/health" && request.method === "GET") {
@@ -458,7 +489,7 @@ async function handleApi(request, env, path) {
       // Gemma 4 supports text, vision, and function calling.
       // Automatic task router: image requests go to FLUX; all other requests use the selected chat mode.
       if (isImageGenerationRequest(message)) {
-        const imagePrompt = message.slice(0, 2048);
+        const imagePrompt = buildImagePrompt(message);
         const generatedImage = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
           prompt: imagePrompt,
           steps: 8
