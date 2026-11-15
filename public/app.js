@@ -2,7 +2,7 @@
 "use strict";
 const $=id=>document.getElementById(id);
 const modes={force:"Force 1.1",apricity:"Apricity 1.2",axiom:"Axiom 2.0"};
-let latestTokenUsage=null,mode=(()=>{try{const saved=localStorage.getItem("project-ai-mode");return ["force","apricity","axiom"].includes(saved)?saved:"apricity"}catch{return "apricity"}})(),thinkingLevel=(()=>{try{const saved=localStorage.getItem("project-ai-thinking");return ["low","medium","high","super_high"].includes(saved)?saved:"high"}catch{return "high"}})(),authMode="login",chatId=null,chats=[],busy=false,toastTimer=null,renameTarget=null;
+let latestTokenUsage=null,providerUsage=(()=>{try{return JSON.parse(localStorage.getItem('clyro-provider-usage')||'{}')}catch{return {}}})(),mode=(()=>{try{const saved=localStorage.getItem("project-ai-mode");return ["force","apricity","axiom"].includes(saved)?saved:"apricity"}catch{return "apricity"}})(),thinkingLevel=(()=>{try{const saved=localStorage.getItem("project-ai-thinking");return ["low","medium","high","super_high"].includes(saved)?saved:"high"}catch{return "high"}})(),authMode="login",chatId=null,chats=[],busy=false,toastTimer=null,renameTarget=null;
 const settingsDefaults={animations:true,memory:false,notes:"",pluginWebSearch:true,pluginCalculator:true,pluginGithub:false};
 let settings=(()=>{try{return {...settingsDefaults,...JSON.parse(localStorage.getItem("project-ai-settings")||"{}")}}catch{return {...settingsDefaults}}})();
 function saveSettings(){try{localStorage.setItem("project-ai-settings",JSON.stringify(settings))}catch{}}
@@ -34,16 +34,23 @@ async function api(path,options={}) {
 }
 
 function renderTokenUsage(){
- const el=$("limitText");
- if(!el)return;
- if(!latestTokenUsage||!Number.isFinite(latestTokenUsage.remainingContextTokens)){
-  el.textContent="Контекст: статистика недоступна";
-  el.title="Провайдер не вернул точное число входных токенов.";
-  return;
- }
- const fmt=n=>Math.max(0,Math.round(n)).toLocaleString("ru-RU");
- el.textContent="Остаток контекста: ~"+fmt(latestTokenUsage.remainingContextTokens)+" токенов";
- el.title="Последний запрос: "+fmt(latestTokenUsage.promptTokens)+" входных токенов; резерв ответа: "+fmt(latestTokenUsage.outputBudget)+". Это контекст, не дневная квота.";
+ const el=$("limitText");if(!el)return;
+ const fmt=n=>Math.max(0,Math.round(Number(n)||0)).toLocaleString("ru-RU");
+ const entries=Object.entries(providerUsage);
+ const total=entries.reduce((sum,[,v])=>sum+Number(v.tokens||0),0);
+ el.textContent="Всего: "+fmt(total)+" токенов"+(entries.length?" · "+entries.map(([name,v])=>name+": "+fmt(v.tokens)).join(" · "):" · пока нет данных");
+ el.title="Сумма токенов, сообщённых провайдерами. Не все модели возвращают точную статистику; лимиты провайдеров здесь не отображаются.";
+}
+function addProviderUsage(usage){
+ if(!usage||!usage.providerId)return;
+ const amount=Number.isFinite(Number(usage.totalTokensUsed))?Number(usage.totalTokensUsed):
+  (Number(usage.promptTokensUsed||0)+Number(usage.completionTokensUsed||0));
+ if(!Number.isFinite(amount)||amount<=0)return;
+ const key=usage.provider||usage.providerId;
+ providerUsage[key]=providerUsage[key]||{tokens:0,requests:0};
+ providerUsage[key].tokens+=amount;providerUsage[key].requests++;
+ try{localStorage.setItem("clyro-provider-usage",JSON.stringify(providerUsage))}catch{}
+ renderTokenUsage();
 }
 
 function setAuthMode(value){authMode=value;$("loginTab").classList.toggle("active",value==="login");$("registerTab").classList.toggle("active",value==="register");$("authSubmit").textContent=value==="login"?"Войти":"Создать аккаунт";$("password").autocomplete=value==="login"?"current-password":"new-password";$("authError").textContent=""}
@@ -109,7 +116,7 @@ $("chatForm").onsubmit=async e=>{
  try{
   const data=await api("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode,thinkingLevel,message,chatId,memory:settings.memory?settings.notes:"",enabledPlugins:[settings.pluginWebSearch?"web_search":null,settings.pluginCalculator?"calculator":null,settings.pluginGithub?"github":null].filter(Boolean)}),signal:requestController.signal});
   chatId=data.chatId;
-  if(data.tokenUsage){latestTokenUsage=data.tokenUsage;renderTokenUsage()}
+  if(data.tokenUsage){latestTokenUsage=data.tokenUsage;addProviderUsage(data.tokenUsage)}
   const answer=bubble(data.reply,"assistant");
   if(data.imageDataURI)attachGeneratedImage(answer,data.imageDataURI);
   if(Array.isArray(data.sources)&&data.sources.length){const sourceBox=document.createElement("div");sourceBox.className="message-sources";const heading=document.createElement("strong");heading.textContent="Источники";sourceBox.append(heading);data.sources.forEach((source,index)=>{if(!source||typeof source.url!=="string"||!/^https?:\/\//i.test(source.url))return;const link=document.createElement("a");link.href=source.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent=(index+1)+". "+(source.title||source.url);sourceBox.append(link)});if(sourceBox.querySelector("a"))answer.append(sourceBox)}
