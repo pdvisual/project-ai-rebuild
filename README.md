@@ -10,16 +10,32 @@ Project AI работает на Cloudflare Workers + Workers AI + Static Assets
 - База уже содержит нужные таблицы. Не запускай миграции и не пересоздавай базу.
 - Старый Worker и Pages-проект не удалять.
 
-## AI-модель и бесплатный лимит
+## AI-провайдеры и автоматическое переключение
 
-Основная модель: Google Gemma 4 26B A4B через Cloudflare Workers AI:
-`@cf/google/gemma-4-26b-a4b-it`.
+Текстовые ответы используют последовательный fallback между пятью провайдерами. Worker пропускает провайдера, если его секрет не настроен, и переходит к следующему при ошибке, лимите, недоступности или пустом ответе.
 
-Модель поддерживает текст, изображения (Vision), function calling и длинный контекст. Запросы идут через встроенный binding `env.AI`, поэтому отдельный API-ключ OpenRouter или Gemini не требуется.
+Порядок и модели:
+1. Groq — `openai/gpt-oss-120b`, ключ `GROQ_API_KEY`.
+2. Cloudflare Workers AI — `@cf/google/gemma-4-26b-a4b-it`, существующий binding `AI`.
+3. SambaNova — `DeepSeek-V3.1`, ключ `SAMBANOVA_API_KEY`.
+4. Mistral — `mistral-small-latest`, ключ `MISTRAL_API_KEY`.
+5. OpenRouter — `openrouter/free`, ключ `OPENROUTER_API_KEY`.
 
-Cloudflare Workers AI предоставляет 10 000 Neurons в сутки бесплатно на Workers Free. Лимит общий для аккаунта и сбрасывается ежедневно в 00:00 UTC. После исчерпания бесплатной квоты запросы могут завершаться ошибкой до сброса. Некоторые модели требуют платный тариф; выбранная Gemma 4 указана Cloudflare среди доступных моделей. Смотри актуальные условия:
-- https://developers.cloudflare.com/workers-ai/platform/pricing/
-- https://developers.cloudflare.com/workers-ai/models/gemma-4-26b-a4b-it/
+Добавь внешние ключи как Worker Secrets в Cloudflare Dashboard → Workers & Pages → projectai-rebuild-test → Settings → Variables and Secrets. Не помещай ключи в GitHub, frontend или сообщения чата. Каждый секрет необязателен: не настроенные провайдеры автоматически пропускаются. AI binding `AI` необходимо сохранить: он используется и для Cloudflare text fallback, и для генерации изображений FLUX.
+
+Проверка состояния: GET `/api/health` возвращает список провайдеров и только булев статус `configured`, никогда не раскрывая ключи.
+
+Ограничения бесплатного доступа не суммируются в гарантированную квоту: Groq лимитирует по организации и модели; Workers AI даёт 10 000 Neurons в сутки на аккаунт; SambaNova Free Tier ограничивает запросы и токены по моделям; OpenRouter free-модели имеют общий лимит аккаунта; Mistral Free mode предназначен прежде всего для оценки и прототипирования. Перед открытием публичной регистрации проверь текущие условия каждого провайдера и его квоты в консоли.
+
+Gemini не включён в бесплатную цепочку для пользователей из ЕЭЗ: дополнительные условия Google требуют Paid Services для API-клиентов, доступных пользователям в ЕЭЗ/Швейцарии/Великобритании. Cohere trial key ограничен 1 000 вызовами в месяц и предназначен для оценки; поэтому он не выбран как основной резерв.
+
+Полезные страницы:
+- Groq limits: https://console.groq.com/docs/rate-limits
+- Workers AI pricing: https://developers.cloudflare.com/workers-ai/platform/pricing/
+- SambaNova rate limits: https://docs.sambanova.ai/docs/en/models/rate-limits
+- Mistral free mode: https://mistral.ai/news/september-24-release/
+- OpenRouter free models: https://openrouter.ai/collections/free-models
+- Gemini API terms: https://ai.google.dev/gemini-api/terms
 
 ## Установка и запуск
 
