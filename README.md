@@ -74,7 +74,7 @@ Wrangler конфигурация содержит AI binding и использ�
 - Sonder: 50 успешных запросов пользователя за скользящие 24 часа.
 - Sonder принимает до 4 изображений JPEG/PNG/GIF/WebP, до 4 MiB каждое, общий размер до 16 MiB. Сервер ограничивает размер JSON-тела.
 - Изображения в D1 не сохраняются, поэтому они не появятся повторно при открытии старого диалога.
-- Плагин веб-поиска временно не подключён к Workers AI и явно сообщает об этом вместо имитации поиска.
+- Для актуальных фактов и всех запросов COBALT используется отдельный Tavily Search API. Поиск возвращает источники и фрагменты напрямую; Groq используется только как языковая модель для ответа.
 
 ## Проверка после публикации
 
@@ -120,3 +120,14 @@ npm run deploy
 ```
 
 Keep the Groq key out of browser code, committed files, and chat messages. Groq rate limits are shared by all users of this CLYRO deployment; HTTP 429 responses mean the account must wait for its quota window to reset.
+
+
+## Независимый веб-поиск Tavily
+
+Создай бесплатный API-ключ в https://tavily.com/ (бесплатный план: 1 000 поисковых кредитов в месяц, без банковской карты) и добавь его в Cloudflare Worker как секрет:
+
+```sh
+npx wrangler secret put TAVILY_API_KEY
+```
+
+Локально добавь `TAVILY_API_KEY=...` в `.dev.vars`. Не добавляй реальный ключ в Git. Веб-поиск выполняется через Tavily Search API; `include_answer:false` отключает сгенерированный поисковый ответ — CLYRO получает результаты и сам формирует ответ через Groq.
