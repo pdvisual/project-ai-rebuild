@@ -68,6 +68,11 @@ function renderLinkedText(container,content){
  }
  if(cursor<text.length)container.append(document.createTextNode(text.slice(cursor)));
 }
+function attachGeneratedImage(element,imageDataURI){
+ if(typeof imageDataURI!=="string"||!imageDataURI.startsWith("data:image/"))return;
+ const image=document.createElement("img");image.className="generated-image";image.src=imageDataURI;image.alt="Изображение, созданное Project AI";image.loading="lazy";
+ element.append(image);
+}
 function bubble(content,role,isError=false,sources=[]){const w=document.querySelector(".welcome");if(w)w.remove();const el=document.createElement("article");el.className="message "+role+(isError?" error":"");const textNode=document.createElement("div");textNode.className="message-text";renderLinkedText(textNode,content);el.append(textNode);if(sources.length){const sourceBox=document.createElement("div");sourceBox.className="message-sources";const heading=document.createElement("strong");heading.textContent="Источники";sourceBox.append(heading);sources.forEach((source,index)=>{if(!source||typeof source.url!=="string"||!/^https?:\/\//i.test(source.url))return;const link=document.createElement("a");link.href=source.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent=(index+1)+". "+(source.title||source.url);sourceBox.append(link)});if(sourceBox.querySelector("a"))el.append(sourceBox)}$("messages").append(el);$("messages").scrollTop=$("messages").scrollHeight;return el}
 async function loadChats(){try{const data=await api("/api/chats");chats=data.chats||[];renderChatList();if(chatId&&chats.some(c=>c.id===chatId))await openChat(chatId);else{chatId=null;renderMessages([])}}catch(e){toast("Не удалось загрузить историю: "+e.message)}}
 function renderChatList(){const list=$("chatList");list.replaceChildren();chats.forEach(chat=>{const row=document.createElement("div");row.className="chat-row"+(chat.id===chatId?" active":"");const open=document.createElement("button");open.className="chat-open";open.textContent=chat.title||"Новый чат";open.title=open.textContent;open.onclick=()=>openChat(chat.id);const actions=document.createElement("div");actions.className="chat-actions";const rename=document.createElement("button");rename.textContent="✎";rename.title="Переименовать";rename.onclick=()=>renameChat(chat);const del=document.createElement("button");del.textContent="×";del.title="Удалить";del.onclick=()=>deleteChat(chat);actions.append(rename,del);row.append(open,actions);list.append(row)})}
@@ -91,6 +96,7 @@ $("chatForm").onsubmit=async e=>{
   const data=await api("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode,thinkingLevel,message,chatId,memory:settings.memory?settings.notes:"",enabledPlugins:[settings.pluginWebSearch?"web_search":null,settings.pluginCalculator?"calculator":null,settings.pluginGithub?"github":null].filter(Boolean)}),signal:requestController.signal});
   chatId=data.chatId;
   const answer=bubble(data.reply,"assistant");
+  if(data.imageDataURI)attachGeneratedImage(answer,data.imageDataURI);
   if(Array.isArray(data.sources)&&data.sources.length){const sourceBox=document.createElement("div");sourceBox.className="message-sources";const heading=document.createElement("strong");heading.textContent="Источники";sourceBox.append(heading);data.sources.forEach((source,index)=>{if(!source||typeof source.url!=="string"||!/^https?:\/\//i.test(source.url))return;const link=document.createElement("a");link.href=source.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent=(index+1)+". "+(source.title||source.url);sourceBox.append(link)});if(sourceBox.querySelector("a"))answer.append(sourceBox)}
   const existing=chats.find(c=>c.id===chatId);if(existing){existing.updated_at=Date.now()/1000}else chats.unshift({id:chatId,title:message.slice(0,80)||"Новый чат",model:mode});
   renderChatList();
