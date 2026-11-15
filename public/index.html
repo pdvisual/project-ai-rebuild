@@ -2,13 +2,14 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#050505"><title>Project AI</title>
-<link rel="stylesheet" href="/style.css?v=project-ai-gold-refresh-2"><script src="/app.js?v=project-ai-gold-refresh-2" defer></script>
+<meta name="theme-color" content="#050505"><title>CLYRO</title>
+<link rel="icon" type="image/svg+xml" href="/clyro-logo.svg">
+<link rel="stylesheet" href="/style.css?v=clyro-brand-1"><script src="/app.js?v=clyro-brand-1" defer></script>
 </head>
 <body>
 <div id="authScreen" class="auth-screen">
   <section class="auth-card">
-    <div class="brand auth-brand">Project <span>AI</span></div>
+    <div class="brand auth-brand"><img class="brand-logo" src="/clyro-logo.svg" alt="" aria-hidden="true"> CLYRO</div>
     <p class="muted">Твой искусственный интеллект</p>
     <div class="auth-tabs"><button id="loginTab" class="active" type="button">Войти</button><button id="registerTab" type="button">Регистрация</button></div>
     <form id="authForm">
@@ -21,7 +22,7 @@
 </div>
 <div id="app" class="app hidden">
   <aside id="sidebar" class="sidebar">
-    <div class="brand">Project <span>AI</span></div>
+    <div class="brand"><img class="brand-logo" src="/clyro-logo.svg" alt="" aria-hidden="true"> CLYRO</div>
     <button id="newChat" class="new-chat">＋ Новый чат</button>
     <div class="history-heading">ИСТОРИЯ ЧАТОВ</div>
     <div id="chatList" class="chat-list"></div>
@@ -35,10 +36,10 @@
       <button id="mobileMenu" class="icon-button" aria-label="Меню">☰</button>
       <div class="model-picker-wrap">
         <button id="modelPicker" class="model-picker" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="modelMenu">
-          <span><span class="mode-heading" id="modeTitle">Apricity 1.2</span><span class="provider-note">Project AI</span></span>
+          <span><span class="mode-heading" id="modeTitle">Apricity 1.2</span><span class="provider-note">CLYRO</span></span>
           <span class="picker-chevron" aria-hidden="true">⌄</span>
         </button>
-        <div id="modelMenu" class="model-menu hidden" role="menu" aria-label="Выбор режима Project AI">
+        <div id="modelMenu" class="model-menu hidden" role="menu" aria-label="Выбор режима CLYRO">
           <div class="model-menu-label">ВЫБЕРИ РЕЖИМ</div>
           <button class="model-option" type="button" data-mode="force" role="menuitemradio" aria-checked="false"><span class="model-option-icon">ϟ</span><span class="model-option-copy"><strong>Force 1.1</strong><small>Project Visual · Lua / Roblox</small></span><span class="model-check">✓</span></button>
           <button class="model-option selected" type="button" data-mode="apricity" role="menuitemradio" aria-checked="true"><span class="model-option-icon">◉</span><span class="model-option-copy"><strong>Apricity 1.2</strong><small>Универсальный помощник</small></span><span class="model-check">✓</span></button>
@@ -50,7 +51,7 @@
       <div class="top-status"><i id="healthDot"></i><span id="healthText">Проверка</span></div>
     </header>
     <section id="messages" class="messages">
-      <div class="welcome"><div class="welcome-icon">P</div><h1>Чем могу помочь?</h1><p>Выбери режим и начни общение с Project AI.</p></div>
+      <div class="welcome"><div class="welcome-icon">P</div><h1>Чем могу помочь?</h1><p>Выбери режим и начни общение с CLYRO.</p></div>
     </section>
     <div class="composer-area">
       <form id="chatForm" class="composer">
@@ -71,27 +72,27 @@
           <button id="send" class="send-button" type="submit">Отправить ↑</button>
         </div>
       </form>
-      <p class="disclaimer">Project AI может ошибаться. Проверяй важную информацию.</p>
+      <p class="disclaimer">CLYRO может ошибаться. Проверяй важную информацию.</p>
     </div>
   </main>
 </div>
 <div id="toast" class="toast" role="status"></div>
 <dialog id="settingsDialog" class="dialog settings-dialog">
   <form method="dialog" id="settingsForm">
-    <div class="settings-head"><div><h3>Настройки Project AI</h3><p>Управляй поведением и внешним видом</p></div><button class="settings-close" value="close" aria-label="Закрыть">×</button></div>
+    <div class="settings-head"><div><h3>Настройки CLYRO</h3><p>Управляй поведением и внешним видом</p></div><button class="settings-close" value="close" aria-label="Закрыть">×</button></div>
     <section class="settings-section">
       <div class="setting-row"><div><strong>Анимации интерфейса</strong><small>Плавное появление сообщений, меню и окон</small></div><label class="switch"><input id="animationsToggle" type="checkbox" checked><span></span></label></div>
     </section>
     <section class="settings-section">
       <h4 class="plugin-section-title">Плагины</h4>
-      <p class="settings-hint plugin-intro">Инструменты, которые Project AI может использовать в ответах.</p>
+      <p class="settings-hint plugin-intro">Инструменты, которые CLYRO может использовать в ответах.</p>
       <div class="setting-row plugin-row"><div><strong>Web Search</strong><small>Поиск актуальной информации в интернете</small></div><label class="switch"><input id="pluginWebSearch" type="checkbox" checked><span></span></label></div>
       <div class="setting-row plugin-row"><div><strong>Calculator</strong><small>Вычисление математических выражений</small></div><label class="switch"><input id="pluginCalculator" type="checkbox" checked><span></span></label></div>
       <div class="setting-row plugin-row"><div><strong>GitHub</strong><small>Поиск публичных репозиториев и просмотр информации о них</small></div><label class="switch"><input id="pluginGithub" type="checkbox"><span></span></label></div>
       <p class="settings-hint">Для расширенного доступа к приватным репозиториям можно будет отдельно добавить секрет GITHUB_TOKEN в Cloudflare. Не вставляй токены в чат.</p>
     </section>
     <section class="settings-section">
-      <div class="setting-row"><div><strong>Память Project AI</strong><small>Учитывать сохранённые заметки в новых ответах</small></div><label class="switch"><input id="memoryToggle" type="checkbox"><span></span></label></div>
+      <div class="setting-row"><div><strong>Память CLYRO</strong><small>Учитывать сохранённые заметки в новых ответах</small></div><label class="switch"><input id="memoryToggle" type="checkbox"><span></span></label></div>
       <label class="memory-label" for="memoryNotes">Что помощник должен помнить</label>
       <textarea id="memoryNotes" class="memory-notes" rows="5" maxlength="4000" placeholder="Например: предпочитаю краткие ответы; мой проект называется Project Delta..."></textarea>
       <p class="settings-hint">Заметки хранятся только в этом браузере. При включённой памяти их содержимое передаётся вместе с запросом, чтобы учитывать его в ответах. Не записывай пароли и секретные ключи.</p>
