@@ -2,7 +2,7 @@
 "use strict";
 const $=id=>document.getElementById(id);
 const modes={force:"Force 1.1",apricity:"Apricity 1.2",axiom:"Axiom 2.0"};
-let mode=(()=>{try{const saved=localStorage.getItem("project-ai-mode");return ["force","apricity","axiom"].includes(saved)?saved:"apricity"}catch{return "apricity"}})(),authMode="login",chatId=null,chats=[],busy=false,toastTimer=null,renameTarget=null;
+let mode=(()=>{try{const saved=localStorage.getItem("project-ai-mode");return ["force","apricity","axiom"].includes(saved)?saved:"apricity"}catch{return "apricity"}})(),thinkingLevel=(()=>{try{const saved=localStorage.getItem("project-ai-thinking");return ["low","medium","high","super_high"].includes(saved)?saved:"high"}catch{return "high"}})(),authMode="login",chatId=null,chats=[],busy=false,toastTimer=null,renameTarget=null;
 const settingsDefaults={animations:true,memory:false,notes:"",pluginWebSearch:true,pluginCalculator:true,pluginGithub:false};
 let settings=(()=>{try{return {...settingsDefaults,...JSON.parse(localStorage.getItem("project-ai-settings")||"{}")}}catch{return {...settingsDefaults}}})();
 function saveSettings(){try{localStorage.setItem("project-ai-settings",JSON.stringify(settings))}catch{}}
@@ -41,6 +41,8 @@ $("authForm").onsubmit=async e=>{e.preventDefault();$("authSubmit").disabled=tru
 $("logout").onclick=async()=>{try{await api("/api/logout",{method:"POST"})}catch(e){toast(e.message)}finally{chats=[];chatId=null;showAuth()}};
 function closeModelMenu(){$("modelMenu").classList.add("hidden");$("modelPicker").setAttribute("aria-expanded","false")}
 function setMode(next){mode=modes[next]?next:"apricity";try{localStorage.setItem("project-ai-mode",mode)}catch{}$("modeTitle").textContent=modes[mode];document.querySelectorAll("[data-mode]").forEach(b=>{const active=b.dataset.mode===mode;b.classList.toggle("selected",active);b.setAttribute("aria-checked",String(active))});closeModelMenu()}
+function setThinkingLevel(next){thinkingLevel=["low","medium","high","super_high"].includes(next)?next:"high";try{localStorage.setItem("project-ai-thinking",thinkingLevel)}catch{}const labels={low:"Low",medium:"Medium",high:"High",super_high:"Super High"};$("thinkingCurrent").textContent=labels[thinkingLevel];document.querySelectorAll("[data-thinking]").forEach(b=>{const active=b.dataset.thinking===thinkingLevel;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active))})}
+document.querySelectorAll("[data-thinking]").forEach(b=>b.addEventListener("click",()=>setThinkingLevel(b.dataset.thinking)));setThinkingLevel(thinkingLevel);
 $("modelPicker").addEventListener("click",e=>{e.preventDefault();const open=$("modelMenu").classList.contains("hidden");$("modelMenu").classList.toggle("hidden",!open);$("modelPicker").setAttribute("aria-expanded",String(open))});
 $("modelMenu").addEventListener("click",e=>{const option=e.target.closest("[data-mode]");if(!option)return;e.preventDefault();setMode(option.dataset.mode)});
 document.addEventListener("click",e=>{if(!e.target.closest(".model-picker-wrap"))closeModelMenu()});
@@ -86,7 +88,7 @@ $("chatForm").onsubmit=async e=>{
  const requestController=new AbortController();
  const requestTimeout=setTimeout(()=>requestController.abort(),100000);
  try{
-  const data=await api("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode,message,chatId,memory:settings.memory?settings.notes:"",enabledPlugins:[settings.pluginWebSearch?"web_search":null,settings.pluginCalculator?"calculator":null,settings.pluginGithub?"github":null].filter(Boolean)}),signal:requestController.signal});
+  const data=await api("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode,thinkingLevel,message,chatId,memory:settings.memory?settings.notes:"",enabledPlugins:[settings.pluginWebSearch?"web_search":null,settings.pluginCalculator?"calculator":null,settings.pluginGithub?"github":null].filter(Boolean)}),signal:requestController.signal});
   chatId=data.chatId;
   const answer=bubble(data.reply,"assistant");
   if(Array.isArray(data.sources)&&data.sources.length){const sourceBox=document.createElement("div");sourceBox.className="message-sources";const heading=document.createElement("strong");heading.textContent="Источники";sourceBox.append(heading);data.sources.forEach((source,index)=>{if(!source||typeof source.url!=="string"||!/^https?:\/\//i.test(source.url))return;const link=document.createElement("a");link.href=source.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent=(index+1)+". "+(source.title||source.url);sourceBox.append(link)});if(sourceBox.querySelector("a"))answer.append(sourceBox)}
