@@ -458,26 +458,7 @@ async function handleApi(request, env, path) {
       // Gemma 4 supports text, vision, and function calling.
       // Automatic task router: image requests go to FLUX; all other requests use the selected chat mode.
       if (isImageGenerationRequest(message)) {
-        const originalImageRequest = message.slice(0, 2048);
-        let imagePrompt = originalImageRequest;
-        try {
-          const promptPrep = await env.AI.run("@cf/google/gemma-4-26b-a4b-it", {
-            messages: [
-              {
-                role: "system",
-                content: "You write image-generation prompts. Translate the user's request into clear, natural English for an image model. Preserve the exact requested main subject, its number, attributes, action, setting, and style. Do not change the subject, do not add people, women, men, faces, or unrelated objects unless explicitly requested. If the user asks for a cat, the main subject must be a cat. Output only the final image prompt, with no explanation."
-              },
-              { role: "user", content: originalImageRequest }
-            ],
-            max_tokens: 220
-          });
-          const prepared = typeof promptPrep?.choices?.[0]?.message?.content === "string"
-            ? promptPrep.choices[0].message.content.trim()
-            : typeof promptPrep?.response === "string" ? promptPrep.response.trim() : "";
-          if (prepared) imagePrompt = prepared.slice(0, 1800);
-        } catch {
-          // Fall back to the user's exact prompt if prompt preparation is unavailable.
-        }
+        const imagePrompt = message.slice(0, 2048);
         const generatedImage = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
           prompt: imagePrompt,
           steps: 8
