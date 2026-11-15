@@ -38,7 +38,7 @@ function renderTokenUsage(){
  const fmt=n=>Math.max(0,Math.round(Number(n)||0)).toLocaleString("ru-RU");
  const entries=Object.entries(providerUsage);
  const total=entries.reduce((sum,[,v])=>sum+Number(v.tokens||0),0);
- el.textContent="Всего: "+fmt(total)+" токенов"+(entries.length?" · "+entries.map(([name,v])=>name+": "+fmt(v.tokens)).join(" · "):" · пока нет данных");
+ el.textContent="Всего использовано: "+fmt(total)+" токенов";
  el.title="Сумма токенов, сообщённых провайдерами. Не все модели возвращают точную статистику; лимиты провайдеров здесь не отображаются.";
 }
 function addProviderUsage(usage){
