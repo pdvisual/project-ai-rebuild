@@ -185,11 +185,11 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .message-text a:focus-visible{outline:2px solid #aaa;outline-offset:3px;border-radius:2px}
 
 
-/* Project AI — warm black & gold visual refresh */
+/* CLYRO — legacy palette normalized to titanium */
 :root{
   --accent:#aebdca;
-  --gold:#aebdca;
-  --gold-bright:#dce5ec;
+  --metal:#aebdca;
+  --metal-bright:#dce5ec;
   --line:#332b1d;
   --line-soft:#242018;
 }
