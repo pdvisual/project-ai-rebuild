@@ -193,7 +193,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
   --line:#2b3540;
   --line-soft:#202a34;
 }
-body,.app,.main{background:radial-gradient(ellipse at 72% 38%,rgba(177,133,42,.075),transparent 36%),#090909}
+body,.app,.main{background:radial-gradient(ellipse at 72% 38%,rgba(128,151,171,.075),transparent 36%),#090909}
 .sidebar{background:#0e0e0e;border-right-color:#29343f}
 .brand{font-family:Manrope,Inter,sans-serif;color:#eee5d4}
 .brand span{color:#aebdca}
@@ -231,7 +231,7 @@ body,.app,.main{background:radial-gradient(ellipse at 72% 38%,rgba(177,133,42,.0
 .chat-open:hover,.chat-row.active .chat-open{background:#1b242d;border-color:#34414d;color:#dce5ec}
 .chat-actions button:hover{color:#aebdca}
 .account{border-top-color:#29343f}
-.auth-screen{background:radial-gradient(circle at 50% 38%,rgba(190,145,54,.11),transparent 34%),#090909}
+.auth-screen{background:radial-gradient(circle at 50% 38%,rgba(130,153,173,.11),transparent 34%),#090909}
 .auth-card{background:linear-gradient(145deg,#151c23,#0d1116);border-color:#34414d;box-shadow:0 24px 90px #0009,0 0 55px #9aabba10}
 .auth-tabs{border-color:#2b3540;background:#0c0c0b}
 .auth-tabs button.active{background:#25323d;border-color:#465461;color:#e3ebf1}
@@ -289,7 +289,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline-color:#a
 /* CLYRO brand */
 .brand{gap:9px;color:#dce5ec;letter-spacing:.02em}
 .brand span{color:#c1ced9}
-.brand-logo{width:29px;height:29px;object-fit:contain;flex:0 0 auto;filter:drop-shadow(0 0 7px rgba(215,173,89,.18))}
+.brand-logo{width:29px;height:29px;object-fit:contain;flex:0 0 auto;filter:drop-shadow(0 0 7px rgba(172,194,211,.18))}
 .auth-brand .brand-logo{width:42px;height:42px}
 .auth-brand{font-size:25px}
 .welcome-icon{background:transparent!important;color:transparent!important;background-image:url('/clyro-logo.svg')!important;background-position:center!important;background-size:contain!important;background-repeat:no-repeat!important;border:0!important;box-shadow:none!important}
