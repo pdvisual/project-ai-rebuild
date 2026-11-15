@@ -4,7 +4,7 @@ const $=id=>document.getElementById(id);
 const MODEL_NAME="OSMIUM 1.0";
 let projects=(()=>{try{return JSON.parse(localStorage.getItem("clyro-projects")||"[]")}catch{return []}})(),chatProjects=(()=>{try{return JSON.parse(localStorage.getItem("clyro-chat-projects")||"{}")}catch{return {}}})(),activeProject=(()=>{try{return localStorage.getItem("clyro-active-project")||"all"}catch{return "all"}})();
 let latestTokenUsage=null,providerUsage=(()=>{try{return JSON.parse(localStorage.getItem('clyro-provider-usage')||'{}')}catch{return {}}})(),mode=(()=>{try{return localStorage.getItem("clyro-model")==="cobalt"?"cobalt":"osmium"}catch{return "osmium"}})(),thinkingLevel=(()=>{try{const saved=localStorage.getItem("project-ai-thinking");return ["low","medium","high","super_high"].includes(saved)?saved:"high"}catch{return "high"}})(),authMode="login",chatId=null,chats=[],busy=false,toastTimer=null,renameTarget=null;
-const settingsDefaults={animations:true,memory:false,notes:"",pluginWebSearch:true,pluginCalculator:true,pluginGithub:false};
+const settingsDefaults={animations:true,memory:false,notes:"",pluginCalculator:true,pluginGithub:false};
 let settings=(()=>{try{return {...settingsDefaults,...JSON.parse(localStorage.getItem("project-ai-settings")||"{}")}}catch{return {...settingsDefaults}}})();
 function saveSettings(){try{localStorage.setItem("project-ai-settings",JSON.stringify(settings))}catch{}}
 function applySettings(){
@@ -12,7 +12,6 @@ function applySettings(){
  $("animationsToggle").checked=!!settings.animations;
  $("memoryToggle").checked=!!settings.memory;
  $("memoryNotes").value=settings.notes||"";
- $("pluginWebSearch").checked=!!settings.pluginWebSearch;
  $("pluginCalculator").checked=!!settings.pluginCalculator;
  $("pluginGithub").checked=!!settings.pluginGithub;
 }
@@ -21,7 +20,7 @@ function applySettings(){
 $("settingsOpen").onclick=()=>{$("settingsDialog").showModal();applySettings()};
 $("settingsForm").onsubmit=e=>{
  e.preventDefault();
- settings={animations:$("animationsToggle").checked,memory:$("memoryToggle").checked,notes:$("memoryNotes").value.trim().slice(0,4000),pluginWebSearch:$("pluginWebSearch").checked,pluginCalculator:$("pluginCalculator").checked,pluginGithub:$("pluginGithub").checked};
+ settings={animations:$("animationsToggle").checked,memory:$("memoryToggle").checked,notes:$("memoryNotes").value.trim().slice(0,4000),pluginCalculator:$("pluginCalculator").checked,pluginGithub:$("pluginGithub").checked};
  saveSettings();applySettings();$("settingsDialog").close();toast("Настройки сохранены");
 };
 $("settingsDialog").addEventListener("click",e=>{if(e.target===$("settingsDialog"))$("settingsDialog").close()});
@@ -145,7 +144,7 @@ $("chatForm").onsubmit=async e=>{
  const requestController=new AbortController();
  const requestTimeout=setTimeout(()=>requestController.abort(),100000);
  try{
-  const data=await api("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:requestMode,thinkingLevel,message,chatId,memory:settings.memory?settings.notes:"",enabledPlugins:[settings.pluginWebSearch?"web_search":null,settings.pluginCalculator?"calculator":null,settings.pluginGithub?"github":null].filter(Boolean)}),signal:requestController.signal});
+  const data=await api("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:requestMode,thinkingLevel,message,chatId,memory:settings.memory?settings.notes:"",enabledPlugins:[settings.pluginCalculator?"calculator":null,settings.pluginGithub?"github":null].filter(Boolean)}),signal:requestController.signal});
   chatId=data.chatId;if(activeProject!=="all"&&!chatProjects[chatId]){chatProjects[chatId]=activeProject;saveProjects()}
   if(data.tokenUsage){latestTokenUsage=data.tokenUsage;addProviderUsage(data.tokenUsage)}
   const answer=bubble(data.reply,"assistant");
