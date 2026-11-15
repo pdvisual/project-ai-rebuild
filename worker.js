@@ -639,6 +639,22 @@ async function handleApi(request, env, path) {
         return error("Workers AI вернул пустой ответ. Попробуй изменить запрос. Код PA-206.", 502, "PA-206");
       }
       const actualModel = model;
+      // Conservative effective context ceiling for the current Workers AI deployment.
+      const contextWindowTokens = 131072;
+      const outputTokenBudget = Math.max(mode === "axiom" ? 4096 : 0,
+        ({ low: 1000, medium: 1600, high: 2600, super_high: 4096 })[thinkingLevel]);
+      const promptTokensUsed = Number.isFinite(completion?.usage?.prompt_tokens)
+        ? completion.usage.prompt_tokens : null;
+      const remainingContextTokens = promptTokensUsed === null
+        ? null : Math.max(0, contextWindowTokens - promptTokensUsed - outputTokenBudget);
+      const tokenQuestion = /(?:сколько|какое|каков).{0,45}(?:токен\w*|контекст\w*).{0,35}(?:остал\w*|свободн\w*|доступн\w*)|(?:токен\w*|контекст\w*).{0,35}(?:остал\w*|свободн\w*|доступн\w*)|how many.{0,35}tokens?.{0,35}(?:left|remain|available)/i.test(message);
+      if (tokenQuestion) {
+        reply = remainingContextTokens === null
+          ? "Сейчас провайдер не передал точную статистику токенов для этого запроса, поэтому я не буду придумывать число. Счётчик появится, когда Cloudflare вернёт usage.prompt_tokens."
+          : "По статистике последнего запроса использовано " + promptTokensUsed.toLocaleString("ru-RU") +
+            " входных токенов. Свободно примерно " + remainingContextTokens.toLocaleString("ru-RU") +
+            " токенов контекста (из консервативного лимита 131 072), с учётом резерва на ответ. Это не остаток дневной квоты Cloudflare.";
+      }
       const now = Math.floor(Date.now() / 1000);
       const userText = message;
       const storedUserContent = userText;
@@ -657,7 +673,16 @@ async function handleApi(request, env, path) {
         env.DB.prepare("UPDATE chats SET updated_at=?, model=? WHERE id=? AND user_id=?")
           .bind(now + 1, mode, chatId, user.id)
       ]);
-      return json({ chatId, reply: reply.trim(), mode, sources, provider: "Cloudflare Workers AI", model: actualModel });
+      return json({
+        chatId, reply: reply.trim(), mode, sources, provider: "Cloudflare Workers AI", model: actualModel,
+        tokenUsage: {
+          contextWindow: contextWindowTokens,
+          promptTokens: promptTokensUsed,
+          outputBudget: outputTokenBudget,
+          remainingContextTokens,
+          metric: "context"
+        }
+      });
     } catch (e) {
       const status = Number(e?.status || e?.statusCode || e?.response?.status || 0);
       console.error("Workers AI request failed", status || "unknown", e?.message || "unknown error");
