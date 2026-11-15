@@ -28,6 +28,10 @@
     <div class="projects-head"><span>ПРОЕКТЫ</span><button id="createProject" type="button" title="Создать проект">＋</button></div><div id="projectList" class="project-list"></div>
     <label class="chat-search-wrap"><span>⌕</span><input id="chatSearch" type="search" placeholder="Поиск по чатам..." autocomplete="off"></label>
     <div id="chatList" class="chat-list"></div>
+    <a class="report-bug-link" href="https://discord.com/app" target="_blank" rel="noopener noreferrer">
+      <span class="report-bug-title">Сообщить об ошибке / баге</span>
+      <span class="report-bug-user">Discord · wh1telys</span>
+    </a>
     <div class="account">
       <div class="account-email" id="userEmail"></div>
       <button id="logout" class="ghost full">Выйти из аккаунта</button>
@@ -57,16 +61,7 @@
         <textarea id="message" rows="1" maxlength="20000" placeholder="Напиши сообщение..."></textarea>
         <div class="composer-bottom">
           <div class="composer-left">
-            <div class="thinking-control" role="group" aria-label="Уровень размышления">
-              <span class="thinking-label">THINKING MODE <strong id="thinkingCurrent">High</strong></span>
-              <div class="thinking-options">
-                <button class="thinking-option" type="button" data-thinking="low" aria-pressed="false">Low</button>
-                <button class="thinking-option" type="button" data-thinking="medium" aria-pressed="false">Medium</button>
-                <button class="thinking-option active" type="button" data-thinking="high" aria-pressed="true">High</button>
-                <button class="thinking-option" type="button" data-thinking="super_high" aria-pressed="false">Super High</button>
-              </div>
-            </div>
-            <span id="limitText" class="limit-text" aria-live="polite">Токены: пока нет данных</span>
+<span id="limitText" class="limit-text" aria-live="polite">Токены: пока нет данных</span>
           </div>
           <button id="send" class="send-button" type="submit">Отправить ↑</button>
         </div>
