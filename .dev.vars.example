@@ -1,2 +1,5 @@
 # Required: Groq API key for the only official CLYRO model, OSMIUM 1.0.
 GROQ_API_KEY=replace-with-your-groq-api-key
+
+# Separate web-search API used by CLYRO; create a key at tavily.com.
+TAVILY_API_KEY=replace-with-your-tavily-api-key
