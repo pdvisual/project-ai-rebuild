@@ -1,8 +1,8 @@
 (() => {
 "use strict";
 const $=id=>document.getElementById(id);
-const modes={velqi:"Velqi",nuvex:"Nuvex",qorvex:"Qorvex",zenvor:"Zenvor",vaelix:"Vaelix"};
-let latestTokenUsage=null,providerUsage=(()=>{try{return JSON.parse(localStorage.getItem('clyro-provider-usage')||'{}')}catch{return {}}})(),mode=(()=>{try{const saved=localStorage.getItem("project-ai-mode");return ["velqi","nuvex","qorvex","zenvor","vaelix"].includes(saved)?saved:"nuvex"}catch{return "nuvex"}})(),thinkingLevel=(()=>{try{const saved=localStorage.getItem("project-ai-thinking");return ["low","medium","high","super_high"].includes(saved)?saved:"high"}catch{return "high"}})(),authMode="login",chatId=null,chats=[],busy=false,toastTimer=null,renameTarget=null;
+const modes={auto:"AUTO",velqi:"Velqi",nuvex:"Nuvex",qorvex:"Qorvex",zenvor:"Zenvor",vaelix:"Vaelix"};
+let latestTokenUsage=null,providerUsage=(()=>{try{return JSON.parse(localStorage.getItem('clyro-provider-usage')||'{}')}catch{return {}}})(),mode=(()=>{try{const saved=localStorage.getItem("project-ai-mode");return ["auto","velqi","nuvex","qorvex","zenvor","vaelix"].includes(saved)?saved:"auto"}catch{return "nuvex"}})(),thinkingLevel=(()=>{try{const saved=localStorage.getItem("project-ai-thinking");return ["low","medium","high","super_high"].includes(saved)?saved:"high"}catch{return "high"}})(),authMode="login",chatId=null,chats=[],busy=false,toastTimer=null,renameTarget=null;
 const settingsDefaults={animations:true,memory:false,notes:"",pluginWebSearch:true,pluginCalculator:true,pluginGithub:false};
 let settings=(()=>{try{return {...settingsDefaults,...JSON.parse(localStorage.getItem("project-ai-settings")||"{}")}}catch{return {...settingsDefaults}}})();
 function saveSettings(){try{localStorage.setItem("project-ai-settings",JSON.stringify(settings))}catch{}}
@@ -61,7 +61,15 @@ $("loginTab").onclick=()=>setAuthMode("login");$("registerTab").onclick=()=>setA
 $("authForm").onsubmit=async e=>{e.preventDefault();$("authSubmit").disabled=true;$("authError").textContent="";try{const data=await api(authMode==="login"?"/api/login":"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("email").value.trim(),password:$("password").value})});showApp(data.user)}catch(err){$("authError").textContent=err.message}finally{$("authSubmit").disabled=false}};
 $("logout").onclick=async()=>{try{await api("/api/logout",{method:"POST"})}catch(e){toast(e.message)}finally{chats=[];chatId=null;showAuth()}};
 function closeModelMenu(){$("modelMenu").classList.add("hidden");$("modelPicker").setAttribute("aria-expanded","false")}
-function setMode(next){mode=modes[next]?next:"nuvex";try{localStorage.setItem("project-ai-mode",mode)}catch{}$("modeTitle").textContent=modes[mode];document.querySelectorAll("[data-mode]").forEach(b=>{const active=b.dataset.mode===mode;b.classList.toggle("selected",active);b.setAttribute("aria-checked",String(active))});document.querySelectorAll("[data-mode-card]").forEach(b=>b.classList.toggle("active",b.dataset.modeCard===mode));closeModelMenu()}
+function setMode(next){mode=modes[next]?next:"auto";try{localStorage.setItem("project-ai-mode",mode)}catch{}$("modeTitle").textContent=modes[mode];document.querySelectorAll("[data-mode]").forEach(b=>{const active=b.dataset.mode===mode;b.classList.toggle("selected",active);b.setAttribute("aria-checked",String(active))});document.querySelectorAll("[data-mode-card]").forEach(b=>b.classList.toggle("active",b.dataset.modeCard===mode));closeModelMenu()}
+function chooseAutoMode(message){
+ const s=String(message||"").toLowerCase();
+ if(/создай изображени|нарисуй|сгенерируй картин|generate an image|draw an image/.test(s))return "nuvex";
+ if(/код|программ|javascript|python|html|css|api|сайт|сайт|приложени|баг|ошибк[ау] в коде|github|cloudflare/.test(s))return "zenvor";
+ if(/проанализируй|сравни|исследуй|подробно|сложн|стратеги|архитектур|математ|докаж/.test(s))return "qorvex";
+ if(/план|бизнес|проект|документ|таблиц|презентац|многоэтап/.test(s))return "nuvex";
+ return "velqi";
+}
 function setThinkingLevel(next){thinkingLevel=["low","medium","high","super_high"].includes(next)?next:"high";try{localStorage.setItem("project-ai-thinking",thinkingLevel)}catch{}const labels={low:"Low",medium:"Medium",high:"High",super_high:"Super High"};$("thinkingCurrent").textContent=labels[thinkingLevel];document.querySelectorAll("[data-thinking]").forEach(b=>{const active=b.dataset.thinking===thinkingLevel;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active))})}
 document.querySelectorAll("[data-thinking]").forEach(b=>b.addEventListener("click",()=>setThinkingLevel(b.dataset.thinking)));setThinkingLevel(thinkingLevel);
 $("modelPicker").addEventListener("click",e=>{e.preventDefault();const open=$("modelMenu").classList.contains("hidden");$("modelMenu").classList.toggle("hidden",!open);$("modelPicker").setAttribute("aria-expanded",String(open))});
@@ -69,23 +77,19 @@ $("modelMenu").addEventListener("click",e=>{const option=e.target.closest("[data
 document.addEventListener("click",e=>{if(!e.target.closest(".model-picker-wrap"))closeModelMenu()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModelMenu()});
 function renderWelcome(){
- const w=document.createElement("div");w.className="welcome-shell";
- w.innerHTML=`<div class="welcome-hero"><div class="hero-eyebrow"><span class="status-pip"></span> CLYRO INTELLIGENCE SYSTEM</div><div class="hero-copy"><h1>Технологии.<br><span>Без границ.</span></h1><p>Пять интеллектуальных режимов. Один интерфейс. Твои идеи — в движении.</p></div><div class="hero-emblem"><img src="/clyro-logo.svg" alt="CLYRO"></div><div class="hero-foot"><span>BLACK TITANIUM EDITION</span><span>01 — 05 / SELECT YOUR CORE</span></div></div>
- <div class="section-heading"><div><small>ПОДБЕРИ ИНТЕЛЛЕКТ</small><h2>Выбери свою CLYRO</h2></div><span>5 РЕЖИМОВ</span></div>
- <div class="mode-grid">
- <button class="mode-card" data-mode-card="velqi"><img src="/images/velqi.svg" alt=""><span class="mode-card-meta">01 / LITE</span><strong>Velqi</strong><small>Быстрый старт для простых задач</small><span class="mode-card-cta">Выбрать режим ↗</span></button>
- <button class="mode-card" data-mode-card="nuvex"><img src="/images/nuvex.svg" alt=""><span class="mode-card-meta">02 / STANDARD</span><strong>Nuvex</strong><small>Универсальный ежедневный помощник</small><span class="mode-card-cta">Выбрать режим ↗</span></button>
- <button class="mode-card" data-mode-card="qorvex"><img src="/images/qorvex.svg" alt=""><span class="mode-card-meta">03 / THINKING</span><strong>Qorvex</strong><small>Логика, сложные вопросы и идеи</small><span class="mode-card-cta">Выбрать режим ↗</span></button>
- <button class="mode-card" data-mode-card="zenvor"><img src="/images/zenvor.svg" alt=""><span class="mode-card-meta">04 / PRO</span><strong>Zenvor</strong><small>Разработка и глубокий анализ</small><span class="mode-card-cta">Выбрать режим ↗</span></button>
- <button class="mode-card featured" data-mode-card="vaelix"><img src="/images/vaelix.svg" alt=""><span class="mode-card-meta">05 / ULTRA</span><strong>Vaelix</strong><small>Максимальная глубина и проверка</small><span class="mode-card-cta">Выбрать режим ↗</span></button>
+ const w=document.createElement("div");w.className="welcome-shell welcome-chat";
+ w.innerHTML=`<div class="welcome-hero welcome-chat-hero"><div class="hero-eyebrow"><span class="status-pip"></span> CLYRO / AI ASSISTANT</div><div class="hero-copy"><h1>Чем займёмся<br><span>сегодня?</span></h1><p>Задай вопрос, расскажи об идее или просто начни разговор.</p></div></div>
+ <div class="section-heading quick-heading"><div><small>БЫСТРЫЙ СТАРТ</small><h2>Что спросить?</h2></div></div>
+ <div class="prompt-grid">
+ <button data-prompt="Помоги придумать и спланировать новый проект">✧ <span><b>Создать проект</b><small>От идеи до плана</small></span></button>
+ <button data-prompt="Напиши и объясни код для моей задачи">⌘ <span><b>Написать код</b><small>Разработка и отладка</small></span></button>
+ <button data-prompt="Изучи эту тему и составь понятное объяснение">◈ <span><b>Изучить тему</b><small>Разобраться глубже</small></span></button>
+ <button data-prompt="Предложи 10 необычных идей для моего проекта">✳ <span><b>Найти идеи</b><small>Нестандартные решения</small></span></button>
+ <button data-prompt="Создай изображение по такому описанию: ">▧ <span><b>Создать изображение</b><small>Опиши, что хочешь увидеть</small></span></button>
  </div>
- <div class="section-heading quick-heading"><div><small>БЫСТРЫЙ СТАРТ</small><h2>С чего начнём?</h2></div></div>
- <div class="prompt-grid"><button data-prompt="Помоги придумать и спланировать новый проект">✧ <span><b>Создать проект</b><small>От идеи до плана</small></span></button><button data-prompt="Напиши и объясни код для моей задачи">⌘ <span><b>Написать код</b><small>Разработка и отладка</small></span></button><button data-prompt="Изучи эту тему и составь понятное объяснение">◈ <span><b>Изучить тему</b><small>Разобраться глубже</small></span></button><button data-prompt="Предложи 10 необычных идей для моего проекта">✳ <span><b>Найти идеи</b><small>Нестандартные решения</small></span></button></div>
- <div class="welcome-note">CLYRO может ошибаться. Проверяй важную информацию.</div>`;
+ <div class="welcome-note">Можно написать что угодно — CLYRO поможет начать.</div>`;
  $("messages").append(w);
- w.querySelectorAll("[data-mode-card]").forEach(b=>b.onclick=()=>{setMode(b.dataset.modeCard);$("message").focus()});
  w.querySelectorAll("[data-prompt]").forEach(b=>b.onclick=()=>{$("message").value=b.dataset.prompt;$("message").focus();$("message").dispatchEvent(new Event("input",{bubbles:true}))});
- setMode(mode);
 }
 function renderLinkedText(container,content){
  const text=String(content??"");
@@ -130,19 +134,19 @@ $("message").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.p
 $("message").addEventListener("input",e=>{e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,180)+"px"});
 $("chatForm").onsubmit=async e=>{
  e.preventDefault();if(busy)return;const message=$("message").value.trim();if(!message)return;
- busy=true;document.querySelectorAll("[data-mode]").forEach(b=>b.disabled=true);$("send").disabled=true;$("send").textContent="Думаю...";
+ const requestMode=mode==="auto"?chooseAutoMode(message):mode;busy=true;document.querySelectorAll("[data-mode]").forEach(b=>b.disabled=true);$("send").disabled=true;$("send").textContent="Думаю...";
  bubble(message,"user");
  $("message").value="";$("message").style.height="auto";
  const requestController=new AbortController();
  const requestTimeout=setTimeout(()=>requestController.abort(),100000);
  try{
-  const data=await api("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode,thinkingLevel,message,chatId,memory:settings.memory?settings.notes:"",enabledPlugins:[settings.pluginWebSearch?"web_search":null,settings.pluginCalculator?"calculator":null,settings.pluginGithub?"github":null].filter(Boolean)}),signal:requestController.signal});
+  const data=await api("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:requestMode,thinkingLevel,message,chatId,memory:settings.memory?settings.notes:"",enabledPlugins:[settings.pluginWebSearch?"web_search":null,settings.pluginCalculator?"calculator":null,settings.pluginGithub?"github":null].filter(Boolean)}),signal:requestController.signal});
   chatId=data.chatId;
   if(data.tokenUsage){latestTokenUsage=data.tokenUsage;addProviderUsage(data.tokenUsage)}
   const answer=bubble(data.reply,"assistant");
   if(data.imageDataURI)attachGeneratedImage(answer,data.imageDataURI);
   if(Array.isArray(data.sources)&&data.sources.length){const sourceBox=document.createElement("div");sourceBox.className="message-sources";const heading=document.createElement("strong");heading.textContent="Источники";sourceBox.append(heading);data.sources.forEach((source,index)=>{if(!source||typeof source.url!=="string"||!/^https?:\/\//i.test(source.url))return;const link=document.createElement("a");link.href=source.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent=(index+1)+". "+(source.title||source.url);sourceBox.append(link)});if(sourceBox.querySelector("a"))answer.append(sourceBox)}
-  const existing=chats.find(c=>c.id===chatId);if(existing){existing.updated_at=Date.now()/1000}else chats.unshift({id:chatId,title:message.slice(0,80)||"Новый чат",model:mode});
+  const existing=chats.find(c=>c.id===chatId);if(existing){existing.updated_at=Date.now()/1000}else chats.unshift({id:chatId,title:message.slice(0,80)||"Новый чат",model:requestMode});
   renderChatList();
  }catch(err){const errorText=err.name==="AbortError"?"Превышено время ожидания ответа (100 секунд). Проверь соединение и попробуй ещё раз.":err.message;bubble("Ошибка: "+errorText+(err.code?" ["+err.code+"]":""),"assistant",true);toast(errorText+(err.code?" · "+err.code:""))}
  finally{clearTimeout(requestTimeout);busy=false;document.querySelectorAll("[data-mode]").forEach(b=>b.disabled=false);$("send").disabled=false;$("send").textContent="Отправить ↑";$("message").focus()}
