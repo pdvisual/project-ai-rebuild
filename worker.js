@@ -298,7 +298,10 @@ async function buildProjectDeltaContext(userMessage) {
 function isImageGenerationRequest(message) {
   const text = String(message || "").toLowerCase().trim();
   if (!text || /как (?:мне )?(?:сгенерировать|создать|нарисовать)|how (?:do i|to) (?:generate|create|draw)/i.test(text)) return false;
-  return /(?:^|[\s,])(?:нарисуй|изобрази)\s+|(?:^|[\s,])(?:сгенерируй|создай|сделай|нарисовать|сгенерировать|создать)\s+(?:(?:мне|нам)\s+)?(?:(?:картинк\w*|изображени\w*|фото|арт|иллюстраци\w*|обложк\w*|логотип\w*|аватар\w*)|(?:image|picture|photo|artwork|illustration|cover|logo|avatar))(?:$|[\s,:])/i.test(text)
+  const imageNoun = /(?:картинк\w*|изображени\w*|фото|фотографи\w*|арт|иллюстраци\w*|обложк\w*|логотип\w*|аватар\w*|image|picture|photo|artwork|illustration|cover|logo|avatar)/i;
+  const visualVerb = /(?:нарисуй|изобрази|сгенерируй|создай|сделай|нарисовать|сгенерировать|создать|покажи|generate|create|draw|make)/i;
+  const subject = /(?:кот\w*|кош\w*|собак\w*|человек\w*|девушк\w*|парен\w*|машин\w*|дом\w*|пейзаж\w*|персонаж\w*|цвет\w*|животн\w*|cat|kitten|dog|person|woman|man|car|house|landscape|character|animal)/i;
+  return (visualVerb.test(text) && (imageNoun.test(text) || subject.test(text)))
     || /(?:generate|create|draw|make)\s+(?:me\s+)?(?:an?\s+)?(?:image|picture|photo|artwork|illustration|cover|logo|avatar)\b/i.test(text)
     || /(?:картинк\w*|изображени\w*|фото|иллюстраци\w*|обложк\w*|логотип\w*|аватар\w*)\s+(?:в стиле|с изображением|где|на которой|с надписью)/i.test(text);
 }
