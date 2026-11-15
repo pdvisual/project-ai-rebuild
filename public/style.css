@@ -541,3 +541,16 @@ body.new-year .mode-card.active{border-color:#82ad98}
 @media(max-width:900px){.mode-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.hero-emblem{right:2%;width:165px;height:165px;opacity:.55}.prompt-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.topbar-actions{gap:5px}.holiday-toggle{width:38px;padding:0;font-size:16px}.holiday-toggle span{display:none}.messages{padding:18px 12px 28px}.welcome-hero{min-height:240px;padding:22px 20px}.hero-copy{margin-top:30px}.hero-copy h1{font-size:40px}.hero-copy p{max-width:260px;font-size:12px}.hero-emblem{width:118px;height:118px;right:-4px;top:45%;opacity:.3}.hero-foot{left:20px;right:20px;bottom:14px;font-size:7px}.mode-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.mode-card{min-height:210px;padding:0 10px 12px}.mode-card img{width:calc(100% + 20px);margin-left:-10px;margin-right:-10px;height:94px}.mode-card small{font-size:9px}.section-heading{margin-top:25px}.section-heading h2{font-size:18px}.prompt-grid{gap:7px}.prompt-grid button{min-height:62px;padding:8px;font-size:17px}.prompt-grid b{font-size:10px}.composer-area{padding:10px 10px 8px}.thinking-options{flex-wrap:wrap}.top-status{display:none}}
 @media(prefers-reduced-motion:reduce){body.new-year:after{animation:none}}
+
+
+/* CLYRO chat-first home */
+.welcome-chat{width:min(780px,100%);margin:auto;padding:clamp(22px,5vw,58px) 0}
+.welcome-chat-hero{min-height:0;padding:0 0 28px;border:0;background:transparent;box-shadow:none}
+.welcome-chat-hero:before,.welcome-chat-hero:after,.welcome-chat-hero .hero-emblem,.welcome-chat-hero .hero-foot{display:none!important}
+.welcome-chat-hero .hero-copy{max-width:620px}
+.welcome-chat-hero .hero-copy h1{font-size:clamp(34px,6vw,54px);line-height:1.04;letter-spacing:-2px}
+.welcome-chat-hero .hero-copy p{max-width:520px;color:#999;font-size:15px}
+.welcome-chat .quick-heading{margin:8px 0 14px}
+.welcome-chat .prompt-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.welcome-chat .welcome-note{margin-top:18px}
+@media(max-width:560px){.welcome-chat{padding:26px 0}.welcome-chat .prompt-grid{grid-template-columns:1fr}.welcome-chat-hero .hero-copy h1{font-size:38px}}
