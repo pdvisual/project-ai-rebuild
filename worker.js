@@ -311,7 +311,7 @@ function buildImagePrompt(message) {
   const original = String(message || "").trim().slice(0, 1800);
   const lower = original.toLowerCase();
   const subjectRules = [
-    { re: /(?:рыж(?:ий|его|ую|ая|ие|их)\s+)?(?:кот(?:а|ик|ёнок|енка)?|кошк(?:а|у|и)|котёнок)/i, subject: "a cat" },
+    { re: /(?:кот(?:а|ик|ёнок|енка)?|кошк(?:а|у|и)|котёнок)/i, subject: "a cat" },
     { re: /(?:сер(?:ый|ого|ую|ая)\s+)(?:кот(?:а|ик)?|кошк(?:а|у)?)/i, subject: "a gray cat" },
     { re: /(?:бел(?:ый|ого|ую|ая)\s+)(?:кот(?:а|ик)?|кошк(?:а|у)?)/i, subject: "a white cat" },
     { re: /(?:чёрн(?:ый|ого|ую|ая)|черн(?:ый|ого|ую|ая))\s+(?:кот(?:а|ик)?|кошк(?:а|у)?)/i, subject: "a black cat" },
