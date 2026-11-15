@@ -3,7 +3,7 @@
 const $=id=>document.getElementById(id);
 const MODEL_NAME="OSMIUM 1.0";
 let projects=(()=>{try{return JSON.parse(localStorage.getItem("clyro-projects")||"[]")}catch{return []}})(),chatProjects=(()=>{try{return JSON.parse(localStorage.getItem("clyro-chat-projects")||"{}")}catch{return {}}})(),activeProject=(()=>{try{return localStorage.getItem("clyro-active-project")||"all"}catch{return "all"}})();
-let latestTokenUsage=null,providerUsage=(()=>{try{return JSON.parse(localStorage.getItem('clyro-provider-usage')||'{}')}catch{return {}}})(),mode=(()=>{try{return localStorage.getItem("clyro-model")==="cobalt"?"cobalt":"osmium"}catch{return "osmium"}})(),thinkingLevel=(()=>{try{const saved=localStorage.getItem("project-ai-thinking");return ["low","medium","high","super_high"].includes(saved)?saved:"high"}catch{return "high"}})(),authMode="login",chatId=null,chats=[],busy=false,toastTimer=null,renameTarget=null;
+let latestTokenUsage=null,providerUsage=(()=>{try{return JSON.parse(localStorage.getItem('clyro-provider-usage')||'{}')}catch{return {}}})(),mode=(()=>{try{return localStorage.getItem("clyro-model")==="cobalt"?"cobalt":"osmium"}catch{return "osmium"}})(),thinkingLevel="high",authMode="login",chatId=null,chats=[],busy=false,toastTimer=null,renameTarget=null;
 const settingsDefaults={animations:true,memory:false,notes:"",pluginCalculator:true,pluginGithub:false};
 let settings=(()=>{try{return {...settingsDefaults,...JSON.parse(localStorage.getItem("project-ai-settings")||"{}")}}catch{return {...settingsDefaults}}})();
 function saveSettings(){try{localStorage.setItem("project-ai-settings",JSON.stringify(settings))}catch{}}
@@ -75,8 +75,7 @@ $("modelPicker").onclick=()=>{const menu=$("modelMenu");const open=menu.classLis
 document.querySelectorAll("[data-model]").forEach(button=>button.addEventListener("click",()=>{setMode(button.dataset.model);toast("Выбрана модель "+MODEL_OPTIONS[mode].name)}));
 document.addEventListener("click",event=>{if(!event.target.closest(".model-picker-wrap")){$("modelMenu").classList.add("hidden");$("modelPicker").setAttribute("aria-expanded","false")}});
 
-function setThinkingLevel(next){thinkingLevel=["low","medium","high","super_high"].includes(next)?next:"high";try{localStorage.setItem("project-ai-thinking",thinkingLevel)}catch{}const labels={low:"Low",medium:"Medium",high:"High",super_high:"Super High"};$("thinkingCurrent").textContent=labels[thinkingLevel];document.querySelectorAll("[data-thinking]").forEach(b=>{const active=b.dataset.thinking===thinkingLevel;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active))})}
-document.querySelectorAll("[data-thinking]").forEach(b=>b.addEventListener("click",()=>setThinkingLevel(b.dataset.thinking)));setThinkingLevel(thinkingLevel);
+
 function renderWelcome(){
  const w=document.createElement("div");w.className="welcome-shell welcome-chat";
  w.innerHTML=`<div class="welcome-hero welcome-chat-hero"><div class="hero-eyebrow"><span class="status-pip"></span> CLYRO / AI ASSISTANT</div><div class="hero-copy"><h1>Чем займёмся<br><span>сегодня?</span></h1><p>Задай вопрос, расскажи об идее или просто начни разговор.</p></div></div>
