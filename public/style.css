@@ -210,14 +210,14 @@ body,.app,.main{background:radial-gradient(ellipse at 72% 38%,rgba(177,133,42,.0
 .model-picker:hover,.model-picker[aria-expanded=true],
 .model-option:hover,.model-option.selected{background:#1b242d;border-color:#465461}
 .model-option.selected .model-option-icon{border-color:#718494;color:#dce5ec}
-.model-option-icon{border-color:#393020}
+.model-option-icon{border-color:#34414d}
 .model-check{color:#dce5ec}
 .mode-heading{color:#edf2f6}
 .picker-chevron,.provider-note{color:#948a78}
 .settings-open:hover{color:#dce5ec}
 .top-status i{background:#aebdca;box-shadow:0 0 10px #aebdca70}
 .messages{scrollbar-color:#493a20 transparent}
-.welcome-icon{background:linear-gradient(145deg,#3a2b13,#17130c);border-color:#526271;color:#dce5ec;box-shadow:0 0 35px #9aabba1f}
+.welcome-icon{background:linear-gradient(145deg,#303d49,#111820);border-color:#526271;color:#dce5ec;box-shadow:0 0 35px #9aabba1f}
 .welcome h1{color:#f2ede3}
 .message.user{background:#1b242d;border-color:#465461;color:#edf2f6}
 .message.assistant{background:linear-gradient(135deg,#151512,#111110);border:1px solid #303b46}
@@ -228,13 +228,13 @@ body,.app,.main{background:radial-gradient(ellipse at 72% 38%,rgba(177,133,42,.0
 .attach{color:#aab8c4}
 .attach:hover{color:#e3ebf1;background:#1b242d}
 .chat-row:hover,.chat-row.active{background:#1b242d}
-.chat-open:hover,.chat-row.active .chat-open{background:#1b242d;border-color:#3b2e18;color:#dce5ec}
+.chat-open:hover,.chat-row.active .chat-open{background:#1b242d;border-color:#34414d;color:#dce5ec}
 .chat-actions button:hover{color:#aebdca}
 .account{border-top-color:#29343f}
 .auth-screen{background:radial-gradient(circle at 50% 38%,rgba(190,145,54,.11),transparent 34%),#090909}
-.auth-card{background:linear-gradient(145deg,#171613,#10100f);border-color:#393020;box-shadow:0 24px 90px #0009,0 0 55px #bd8c3010}
+.auth-card{background:linear-gradient(145deg,#151c23,#0d1116);border-color:#34414d;box-shadow:0 24px 90px #0009,0 0 55px #9aabba10}
 .auth-tabs{border-color:#302b20;background:#0c0c0b}
-.auth-tabs button.active{background:#302515;border-color:#6c5124;color:#e3ebf1}
+.auth-tabs button.active{background:#25323d;border-color:#6c5124;color:#e3ebf1}
 .field input,.dialog input,.memory-notes{background:#0b0b0a;border-color:#39352d}
 .field input:focus,.dialog input:focus,.memory-notes:focus{border-color:#aebdca}
 .dialog,.settings-dialog{background:#151411;border-color:#554322}
@@ -253,7 +253,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline-color:#a
 
 
 /* Thinking level selector — adapted from the updated Project AI concept */
-.composer{padding:15px 17px 13px;border-radius:25px;background:linear-gradient(135deg,#211e19,#171613);border-color:#514027;box-shadow:0 16px 45px #0008,inset 0 1px 0 #ffffff0c}
+.composer{padding:15px 17px 13px;border-radius:25px;background:linear-gradient(135deg,#211e19,#151c23);border-color:#514027;box-shadow:0 16px 45px #0008,inset 0 1px 0 #ffffff0c}
 .composer:focus-within{border-color:#91a4b5;box-shadow:0 0 0 3px #aebdca16,0 16px 45px #0008}
 .composer textarea{font-size:15px;min-height:46px}
 .composer-bottom{align-items:flex-end}
@@ -270,7 +270,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline-color:#a
 .send-button{width:46px;min-width:46px;height:46px;min-height:46px;border-radius:15px;background:linear-gradient(135deg,#e2eaf0,#8294a3);color:#101820}
 .send-button:hover{background:linear-gradient(135deg,#f0f5f8,#a4b4c1);color:#101820}
 .welcome{margin-top:clamp(55px,13vh,125px)}
-.welcome-icon{width:68px;height:68px;border-radius:22px;font-size:34px;background:linear-gradient(145deg,#303d49,#17140f);border-color:#526271;color:#e3edf5;box-shadow:0 0 45px #aebdca22,inset 0 1px 0 #ffffff35}
+.welcome-icon{width:68px;height:68px;border-radius:22px;font-size:34px;background:linear-gradient(145deg,#303d49,#111820);border-color:#526271;color:#e3edf5;box-shadow:0 0 45px #aebdca22,inset 0 1px 0 #ffffff35}
 .welcome h1{font-size:clamp(29px,4vw,39px);letter-spacing:-1.35px}
 @media(max-width:760px){
  .composer{padding:10px 10px 9px}
