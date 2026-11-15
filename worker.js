@@ -295,6 +295,14 @@ async function buildProjectDeltaContext(userMessage) {
     "\n\nПолный файл: " + PROJECT_DELTA_SOURCE_URL;
 }
 
+function isImageGenerationRequest(message) {
+  const text = String(message || "").toLowerCase().trim();
+  if (!text || /как (?:мне )?(?:сгенерировать|создать|нарисовать)|how (?:do i|to) (?:generate|create|draw)/i.test(text)) return false;
+  return /(?:^|[\\s,])(?:нарисуй|изобрази|сгенерируй|создай|сделай|нарисовать|сгенерировать|создать)\\s+(?:(?:мне|нам)\\s+)?(?:(?:картинк\\w*|изображени\\w*|фото|арт|иллюстраци\\w*|обложк\\w*|логотип\\w*|аватар\\w*)|(?:image|picture|photo|artwork|illustration|cover|logo|avatar))(?:$|[\\s,:])/i.test(text)
+    || /(?:generate|create|draw|make)\\s+(?:me\\s+)?(?:an?\\s+)?(?:image|picture|photo|artwork|illustration|cover|logo|avatar)\\b/i.test(text)
+    || /(?:картинк\\w*|изображени\\w*|фото|иллюстраци\\w*|обложк\\w*|логотип\\w*|аватар\\w*)\\s+(?:в стиле|с изображением|где|на которой|с надписью)/i.test(text);
+}
+
 async function handleApi(request, env, path) {
   if (!env.DB) return error("На Worker не настроен D1 binding DB.", 500);
   if (path === "/api/health" && request.method === "GET") {
@@ -445,6 +453,41 @@ async function handleApi(request, env, path) {
     try {
       // Workers AI direct binding: no external API key required.
       // Gemma 4 supports text, vision, and function calling.
+      // Automatic task router: image requests go to FLUX; all other requests use the selected chat mode.
+      if (isImageGenerationRequest(message)) {
+        const imagePrompt = message.slice(0, 2048);
+        const generatedImage = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
+          prompt: imagePrompt,
+          steps: 8
+        });
+        if (!generatedImage || typeof generatedImage.image !== "string" || !generatedImage.image) {
+          return error("Модель изображений не вернула картинку. Попробуй уточнить описание.", 502, "PA-206");
+        }
+        const imageReply = "Готово! Я выбрал модель FLUX и создал изображение по твоему запросу.";
+        const now = Math.floor(Date.now() / 1000);
+        if (!chat) {
+          chatId = uuid();
+          const title = userText.slice(0, 80) || "Новый чат";
+          await env.DB.prepare("INSERT INTO chats (id,user_id,title,model,created_at,updated_at) VALUES (?,?,?,?,?,?)")
+            .bind(chatId, user.id, title, mode, now, now).run();
+        }
+        await env.DB.batch([
+          env.DB.prepare("INSERT INTO messages (id,chat_id,role,content,created_at) VALUES (?,?,?,?,?)")
+            .bind(uuid(), chatId, "user", message, now),
+          env.DB.prepare("INSERT INTO messages (id,chat_id,role,content,created_at) VALUES (?,?,?,?,?)")
+            .bind(uuid(), chatId, "assistant", imageReply, now + 1),
+          env.DB.prepare("UPDATE chats SET updated_at=?, model=? WHERE id=? AND user_id=?")
+            .bind(now + 1, mode, chatId, user.id)
+        ]);
+        return json({
+          chatId,
+          reply: imageReply,
+          imageDataURI: "data:image/jpeg;charset=utf-8;base64," + generatedImage.image,
+          taskType: "image_generation",
+          provider: "Cloudflare Workers AI",
+          model: "@cf/black-forest-labs/flux-1-schnell"
+        });
+      }
       const model = "@cf/google/gemma-4-26b-a4b-it";
       const webSearchEnabled = enabledPlugins.includes("web_search");
       const webSearchTools = webSearchEnabled ? [{
