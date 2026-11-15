@@ -12,28 +12,20 @@ Project AI работает на Cloudflare Workers + Workers AI + Static Assets
 
 ## AI-провайдеры и автоматическое переключение
 
-Текстовые ответы используют последовательный fallback между пятью провайдерами. Worker пропускает провайдера, если его секрет не настроен, и переходит к следующему при ошибке, лимите, недоступности или пустом ответе.
+Текстовые ответы идут через единый маршрутизатор:
+1. Cloudflare Workers AI — основной провайдер, модель `@cf/meta/llama-3.3-70b-instruct-fp8-fast`, binding `AI`.
+2. Groq — резервный провайдер, модель `openai/gpt-oss-120b`, секрет `GROQ_API_KEY`.
 
-Порядок и модели:
-1. Groq — `openai/gpt-oss-120b`, ключ `GROQ_API_KEY`.
-2. Cloudflare Workers AI — `@cf/google/gemma-4-26b-a4b-it`, существующий binding `AI`.
-3. SambaNova — `DeepSeek-V3.1`, ключ `SAMBANOVA_API_KEY`.
-4. Mistral — `mistral-small-latest`, ключ `MISTRAL_API_KEY`.
-5. OpenRouter — `openrouter/free`, ключ `OPENROUTER_API_KEY`.
+Если Cloudflare Workers AI недоступен, маршрутизатор пробует Groq. Если Groq не настроен или исчерпал лимит, основной Cloudflare-провайдер остаётся независимым от него. Для работы основного маршрута достаточно существующего AI binding; внешний ключ Groq больше не обязателен.
 
-Добавь внешние ключи как Worker Secrets в Cloudflare Dashboard → Workers & Pages → projectai-rebuild-test → Settings → Variables and Secrets. Не помещай ключи в GitHub, frontend или сообщения чата. Каждый секрет необязателен: не настроенные провайдеры автоматически пропускаются. AI binding `AI` необходимо сохранить: он используется и для Cloudflare text fallback, и для генерации изображений FLUX.
+AI binding `AI` также используется для генерации изображений FLUX — его необходимо сохранить. Проверка состояния: GET `/api/health` возвращает список провайдеров и только булев статус `configured`, никогда не раскрывая ключи.
 
-Проверка состояния: GET `/api/health` возвращает список провайдеров и только булев статус `configured`, никогда не раскрывая ключи.
-
-Ограничения бесплатного доступа не суммируются в гарантированную квоту: Groq лимитирует по организации и модели; Workers AI даёт 10 000 Neurons в сутки на аккаунт; SambaNova Free Tier ограничивает запросы и токены по моделям; OpenRouter free-модели имеют общий лимит аккаунта; Mistral Free mode предназначен прежде всего для оценки и прототипирования. Перед открытием публичной регистрации проверь текущие условия каждого провайдера и его квоты в консоли.
-
+Workers AI тарифицируется в Neurons и имеет лимиты аккаунта; это не безлимитный сервис. Проверь текущую квоту и usage в Cloudflare Dashboard.
 
 Полезные страницы:
-- Groq limits: https://console.groq.com/docs/rate-limits
+- Workers AI models: https://developers.cloudflare.com/workers-ai/models/llama-3.3-70b-instruct-fp8-fast/
 - Workers AI pricing: https://developers.cloudflare.com/workers-ai/platform/pricing/
-- SambaNova rate limits: https://docs.sambanova.ai/docs/en/models/rate-limits
-- Mistral free mode: https://mistral.ai/news/september-24-release/
-- OpenRouter free models: https://openrouter.ai/collections/free-models
+- Groq limits: https://console.groq.com/docs/rate-limits
 
 ## Установка и запуск
 
@@ -74,7 +66,7 @@ Wrangler конфигурация содержит AI binding и использ�
 - Sonder: 50 успешных запросов пользователя за скользящие 24 часа.
 - Sonder принимает до 4 изображений JPEG/PNG/GIF/WebP, до 4 MiB каждое, общий размер до 16 MiB. Сервер ограничивает размер JSON-тела.
 - Изображения в D1 не сохраняются, поэтому они не появятся повторно при открытии старого диалога.
-- Для актуальных фактов и всех запросов COBALT используется отдельный Tavily Search API. Поиск возвращает источники и фрагменты напрямую; Groq используется только как языковая модель для ответа.
+- Для актуальных фактов и всех запросов COBALT используется отдельный Tavily Search API. Поиск возвращает источники и фрагменты напрямую; ответ формирует текущий основной AI-провайдер (Cloudflare Workers AI) или резервный Groq.
 
 ## Проверка после публикации
 
@@ -108,19 +100,9 @@ Wrangler конфигурация содержит AI binding и использ�
 | PA-999 | Не классифицированная ошибка |
 
 
-## OSMIUM 1.0 (official CLYRO model)
+## OSMIUM 1.0 и COBALT 1.1
 
-CLYRO uses one text model only: `openai/gpt-oss-120b` through the Groq Chat Completions API. There is no automatic provider fallback.
-
-Configure the key locally in `.dev.vars` (see `.dev.vars.example`) or add it to Cloudflare Workers as a secret:
-
-```sh
-npx wrangler secret put GROQ_API_KEY
-npm run deploy
-```
-
-Keep the Groq key out of browser code, committed files, and chat messages. Groq rate limits are shared by all users of this CLYRO deployment; HTTP 429 responses mean the account must wait for its quota window to reset.
-
+Обе модели используют общий серверный маршрутизатор. Основной провайдер — Cloudflare Workers AI; Groq — резервный. Секрет `GROQ_API_KEY` необязателен. Не удаляй AI binding из `wrangler.jsonc`.
 
 ## Независимый веб-поиск Tavily
 
@@ -130,4 +112,4 @@ Keep the Groq key out of browser code, committed files, and chat messages. Groq 
 npx wrangler secret put TAVILY_API_KEY
 ```
 
-Локально добавь `TAVILY_API_KEY=...` в `.dev.vars`. Не добавляй реальный ключ в Git. Веб-поиск выполняется через Tavily Search API; `include_answer:false` отключает сгенерированный поисковый ответ — CLYRO получает результаты и сам формирует ответ через Groq.
+Локально добавь `TAVILY_API_KEY=...` в `.dev.vars`. Не добавляй реальный ключ в Git. Веб-поиск выполняется через Tavily Search API; `include_answer:false` отключает сгенерированный поисковый ответ — CLYRO получает результаты и сам формирует ответ через текущий AI-провайдер.
