@@ -27,7 +27,6 @@ Project AI работает на Cloudflare Workers + Workers AI + Static Assets
 
 Ограничения бесплатного доступа не суммируются в гарантированную квоту: Groq лимитирует по организации и модели; Workers AI даёт 10 000 Neurons в сутки на аккаунт; SambaNova Free Tier ограничивает запросы и токены по моделям; OpenRouter free-модели имеют общий лимит аккаунта; Mistral Free mode предназначен прежде всего для оценки и прототипирования. Перед открытием публичной регистрации проверь текущие условия каждого провайдера и его квоты в консоли.
 
-Gemini не включён в бесплатную цепочку для пользователей из ЕЭЗ: дополнительные условия Google требуют Paid Services для API-клиентов, доступных пользователям в ЕЭЗ/Швейцарии/Великобритании. Cohere trial key ограничен 1 000 вызовами в месяц и предназначен для оценки; поэтому он не выбран как основной резерв.
 
 Полезные страницы:
 - Groq limits: https://console.groq.com/docs/rate-limits
@@ -35,7 +34,6 @@ Gemini не включён в бесплатную цепочку для пол�
 - SambaNova rate limits: https://docs.sambanova.ai/docs/en/models/rate-limits
 - Mistral free mode: https://mistral.ai/news/september-24-release/
 - OpenRouter free models: https://openrouter.ai/collections/free-models
-- Gemini API terms: https://ai.google.dev/gemini-api/terms
 
 ## Установка и запуск
 
