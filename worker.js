@@ -112,7 +112,7 @@ function json(data, status = 200, headers = {}) {
   });
 }
 function error(message, status = 400, code = null, extra = {}) {
-  const diagnosticCode = code || ({400:"PA-101",401:"PA-102",403:"PA-103",404:"PA-104",409:"PA-105",413:"PA-106",429:"PA-203",500:"PA-301",502:"PA-299",503:"PA-201",504:"PA-205"}[status] || "PA-999");
+  const diagnosticCode = code || ({400:"CL-101",401:"CL-102",403:"CL-103",404:"CL-104",409:"CL-105",413:"CL-106",429:"CL-203",500:"CL-301",502:"CL-299",503:"CL-201",504:"CL-205"}[status] || "CL-999");
   return json({ error: message, code: diagnosticCode, ...extra }, status);
 }
 function uuid() { return crypto.randomUUID(); }
@@ -536,13 +536,13 @@ async function handleApi(request, env, path) {
 
 
   if (path === "/api/chat" && request.method === "POST") {
-    if (!getTextProviderStatus(env).some(item => item.configured)) return error("Не подключён ни один ИИ-провайдер. Добавь API-ключи в Secrets или включи Workers AI.", 503, "PA-201");
+    if (!getTextProviderStatus(env).some(item => item.configured)) return error("Не подключён ни один ИИ-провайдер. Добавь API-ключи в Secrets или включи Workers AI.", 503, "CL-201");
     let data;
     try { data = await bodyJson(request); } catch { return error("Не удалось прочитать запрос. Проверь размер сообщения и изображений.", 400); }
     const mode = MODES[data.mode] ? data.mode : "nuvex";
     const thinkingLevel = ["low", "medium", "high", "super_high"].includes(data.thinkingLevel) ? data.thinkingLevel : "high";
     const message = safeText(data.message, 20000);
-    if (Array.isArray(data.images) && data.images.length) return error("Загрузка изображений отключена.", 400, "PA-107");
+    if (Array.isArray(data.images) && data.images.length) return error("Загрузка изображений отключена.", 400, "CL-107");
     if (!message) return error("Напиши сообщение.", 400);
     let chatId = safeText(data.chatId, 80);
     let chat = chatId ? await ownedChat(chatId, user, env) : null;
@@ -589,14 +589,14 @@ async function handleApi(request, env, path) {
       // Gemma 4 supports text, vision, and function calling.
       // Automatic task router: image requests go to FLUX; all other requests use the selected chat mode.
       if (isImageGenerationRequest(message)) {
-        if (!env.AI) return error("Генерация изображений пока недоступна: не настроен Workers AI.", 503, "PA-201");
+        if (!env.AI) return error("Инструмент временно недоступен. Попробуй позже. Код CL-201.", 503, "CL-201");
         const imagePrompt = buildImagePrompt(message);
         const generatedImage = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
           prompt: imagePrompt,
           steps: 8
         });
         if (!generatedImage || typeof generatedImage.image !== "string" || !generatedImage.image) {
-          return error("Не получилось создать изображение. Попробуй ещё раз или уточни запрос.", 502, "PA-206");
+          return error("Не удалось выполнить операцию. Попробуй ещё раз. Код CL-206.", 502, "CL-206");
         }
         const imageReply = "Готово! Вот изображение.";
         const now = Math.floor(Date.now() / 1000);
@@ -686,7 +686,7 @@ async function handleApi(request, env, path) {
             searchItems = Array.isArray(searchResults?.items) ? searchResults.items : [];
           } catch (searchError) {
             console.error("Cloudflare Web Search failed", searchError?.message || "unknown error");
-            return error("Веб-поиск не запустился. Проверь AI Gateway: нужны кредиты или API-ключ провайдера (Exa/Ceramic/Linkup). Код PA-211.", 503, "PA-211");
+            return error("Веб-поиск не запустился. Проверь AI Gateway: нужны кредиты или API-ключ провайдера (Exa/Ceramic/Linkup). Код CL-211.", 503, "CL-211");
           }
           lastRoute = await callTextProvider(env, [
             ...finalRequestMessages,
@@ -736,7 +736,7 @@ async function handleApi(request, env, path) {
         }));
       if (!reply.trim()) {
         console.error("AI providers returned no text", assistantMessage?.refusal || completion?.choices?.[0]?.finish_reason || "empty response");
-        return error("ИИ-провайдеры не вернули текст. Попробуй изменить запрос. Код PA-206.", 502, "PA-206");
+        return error("Не удалось подготовить ответ. Попробуй изменить запрос. Код CL-206.", 502, "CL-206");
       }
       const actualModel = lastRoute?.model || "unknown";
       const actualProvider = lastRoute?.provider || "unknown";
@@ -792,11 +792,9 @@ async function handleApi(request, env, path) {
       const status = Number(e?.status || e?.statusCode || e?.response?.status || 0);
       console.error("AI provider chain failed", status || "unknown", e?.providerFailures || e?.name || "unknown error");
       if (e?.name === "AbortError" || /timeout/i.test(e?.message || "")) {
-        return error("ИИ-провайдеры не ответили вовремя. Попробуй ещё раз. Код PA-205.", 504, "PA-205");
+        return error("Время ожидания ответа истекло. Попробуй ещё раз. Код CL-205.", 504, "CL-205");
       }
-      return error("Сейчас все подключённые ИИ-провайдеры недоступны. Попробуй позже. Код PA-204.", 503, "PA-204", {
-        diagnostics: Array.isArray(e?.providerFailures) ? e.providerFailures.slice(0, 5) : []
-      });
+      return error("Сервис временно не может обработать запрос. Попробуй позже. Код CL-204.", 503, "CL-204");
     }
   }
   return error("API-маршрут не найден.", 404);
