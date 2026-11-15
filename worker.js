@@ -435,6 +435,7 @@ async function handleApi(request, env, path) {
       ? "Если для ответа нужны актуальные сведения, новости, релизы, цены, документация или проверка фактов, используй инструмент web_search. Не выдумывай результаты поиска. Опирайся на найденные источники и указывай ссылки."
       : "";
     const systemPrompt = [baseSystemPrompt, thinkingPrompt, formattingRules, memoryPrompt, webSearchPrompt, pluginContext.join("\n\n")].filter(Boolean).join("\n\n");
+    const deepThinking = mode === "axiom" && ["high", "super_high"].includes(thinkingLevel);
     // Keep the full conversation payload available to the Workers AI call.
     const requestMessages = [
       { role: "system", content: systemPrompt },
@@ -459,8 +460,28 @@ async function handleApi(request, env, path) {
         }
       }] : [];
       const modelOptions = webSearchEnabled ? { gateway: { id: "default" } } : undefined;
+      let finalRequestMessages = requestMessages;
+      if (deepThinking) {
+        const prepTokens = thinkingLevel === "super_high" ? 1200 : 700;
+        const prep = await env.AI.run(model, {
+          messages: [
+            { role: "system", content: systemPrompt + "\n\nПОДГОТОВИТЕЛЬНЫЙ ЭТАП: не давай пользователю ответ. Составь краткую рабочую записку: цель задачи, важные исходные данные, допущения, что нужно проверить и возможные крайние случаи. Не раскрывай скрытую цепочку рассуждений. Будь конкретным и кратким." },
+            { role: "user", content: currentMessageContent }
+          ],
+          max_tokens: prepTokens
+        });
+        const prepText = typeof prep?.choices?.[0]?.message?.content === "string"
+          ? prep.choices[0].message.content
+          : typeof prep?.response === "string" ? prep.response : "";
+        if (prepText.trim()) {
+          finalRequestMessages = [
+            ...requestMessages,
+            { role: "system", content: "ВНУТРЕННЯЯ РАБОЧАЯ ЗАПИСКА ДЛЯ ЭТОГО ОТВЕТА (не цитируй её пользователю):\\n" + prepText.slice(0, 7000) }
+          ];
+        }
+      }
       let completion = await env.AI.run(model, {
-        messages: requestMessages,
+        messages: finalRequestMessages,
         max_tokens: Math.max(mode === "axiom" ? 4096 : 0, ({ low: 1000, medium: 1600, high: 2600, super_high: 4096 })[thinkingLevel]),
         ...(webSearchEnabled ? { tools: webSearchTools } : {})
       }, modelOptions);
@@ -494,7 +515,7 @@ async function handleApi(request, env, path) {
           }
           completion = await env.AI.run(model, {
             messages: [
-              ...requestMessages,
+              ...finalRequestMessages,
               {
                 role: "tool",
                 name: "web_search",
@@ -506,6 +527,24 @@ async function handleApi(request, env, path) {
             ],
             max_tokens: Math.max(mode === "axiom" ? 4096 : 0, ({ low: 1000, medium: 1600, high: 2600, super_high: 4096 })[thinkingLevel])
           }, { gateway: { id: "default" } });
+        }
+      }
+      if (deepThinking && thinkingLevel === "super_high") {
+        const draftMessage = completion?.choices?.[0]?.message;
+        const draftText = typeof draftMessage?.content === "string"
+          ? draftMessage.content
+          : Array.isArray(draftMessage?.content)
+            ? draftMessage.content.map(part => typeof part?.text === "string" ? part.text : "").join("")
+            : typeof completion?.response === "string" ? completion.response : "";
+        if (draftText.trim()) {
+          completion = await env.AI.run(model, {
+            messages: [
+              { role: "system", content: systemPrompt + "\n\nФИНАЛЬНАЯ НЕЗАВИСИМАЯ ПРОВЕРКА: перед тобой черновик ответа. Проверь фактическую точность, логику, полноту, противоречия и крайние случаи. Исправь обнаруженные проблемы и верни только готовый ответ пользователю. Не перечисляй скрытые рассуждения. Не добавляй факты, которых нет в исходных данных. Если использовался веб-поиск, не приписывай источникам то, чего в них нет, и сохрани уместные URL." },
+              { role: "user", content: currentMessageContent },
+              { role: "assistant", content: draftText }
+            ],
+            max_tokens: 4096
+          }, modelOptions);
         }
       }
       const assistantMessage = completion?.choices?.[0]?.message;
