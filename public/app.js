@@ -3,7 +3,7 @@
 const $=id=>document.getElementById(id);
 const MODEL_NAME="OSMIUM 1.0";
 let projects=(()=>{try{return JSON.parse(localStorage.getItem("clyro-projects")||"[]")}catch{return []}})(),chatProjects=(()=>{try{return JSON.parse(localStorage.getItem("clyro-chat-projects")||"{}")}catch{return {}}})(),activeProject=(()=>{try{return localStorage.getItem("clyro-active-project")||"all"}catch{return "all"}})();
-let latestTokenUsage=null,providerUsage=(()=>{try{return JSON.parse(localStorage.getItem('clyro-provider-usage')||'{}')}catch{return {}}})(),mode="osmium",thinkingLevel=(()=>{try{const saved=localStorage.getItem("project-ai-thinking");return ["low","medium","high","super_high"].includes(saved)?saved:"high"}catch{return "high"}})(),authMode="login",chatId=null,chats=[],busy=false,toastTimer=null,renameTarget=null;
+let latestTokenUsage=null,providerUsage=(()=>{try{return JSON.parse(localStorage.getItem('clyro-provider-usage')||'{}')}catch{return {}}})(),mode=(()=>{try{return localStorage.getItem("clyro-model")==="cobalt"?"cobalt":"osmium"}catch{return "osmium"}})(),thinkingLevel=(()=>{try{const saved=localStorage.getItem("project-ai-thinking");return ["low","medium","high","super_high"].includes(saved)?saved:"high"}catch{return "high"}})(),authMode="login",chatId=null,chats=[],busy=false,toastTimer=null,renameTarget=null;
 const settingsDefaults={animations:true,memory:false,notes:"",pluginWebSearch:true,pluginCalculator:true,pluginGithub:false};
 let settings=(()=>{try{return {...settingsDefaults,...JSON.parse(localStorage.getItem("project-ai-settings")||"{}")}}catch{return {...settingsDefaults}}})();
 function saveSettings(){try{localStorage.setItem("project-ai-settings",JSON.stringify(settings))}catch{}}
@@ -61,7 +61,21 @@ async function checkSession(){try{const data=await api("/api/me");if(data.authen
 $("loginTab").onclick=()=>setAuthMode("login");$("registerTab").onclick=()=>setAuthMode("register");
 $("authForm").onsubmit=async e=>{e.preventDefault();$("authSubmit").disabled=true;$("authError").textContent="";try{const data=await api(authMode==="login"?"/api/login":"/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("email").value.trim(),password:$("password").value})});showApp(data.user)}catch(err){$("authError").textContent=err.message}finally{$("authSubmit").disabled=false}};
 $("logout").onclick=async()=>{try{await api("/api/logout",{method:"POST"})}catch(e){toast(e.message)}finally{chats=[];chatId=null;showAuth()}};
-function setMode(){mode="osmium";$("modeTitle").textContent=MODEL_NAME;}
+const MODEL_OPTIONS={osmium:{name:"OSMIUM 1.0",note:"Универсальная модель CLYRO",icon:"✧"},cobalt:{name:"COBALT 1.1",note:"Игровой специалист · 6 игр",icon:"◈"}};
+function setMode(next=mode){
+ mode=Object.prototype.hasOwnProperty.call(MODEL_OPTIONS,next)?next:"osmium";
+ try{localStorage.setItem("clyro-model",mode)}catch{}
+ const selected=MODEL_OPTIONS[mode];
+ $("modeTitle").textContent=selected.name;
+ $("modeNote").textContent=selected.note;
+ $("modelPicker").setAttribute("aria-expanded","false");
+ $("modelMenu").classList.add("hidden");
+ document.querySelectorAll("[data-model]").forEach(button=>{const active=button.dataset.model===mode;button.classList.toggle("selected",active);button.setAttribute("aria-pressed",String(active))});
+}
+$("modelPicker").onclick=()=>{const menu=$("modelMenu");const open=menu.classList.contains("hidden");menu.classList.toggle("hidden",!open);$("modelPicker").setAttribute("aria-expanded",String(open))};
+document.querySelectorAll("[data-model]").forEach(button=>button.addEventListener("click",()=>{setMode(button.dataset.model);toast("Выбрана модель "+MODEL_OPTIONS[mode].name)}));
+document.addEventListener("click",event=>{if(!event.target.closest(".model-picker-wrap")){$("modelMenu").classList.add("hidden");$("modelPicker").setAttribute("aria-expanded","false")}});
+
 function setThinkingLevel(next){thinkingLevel=["low","medium","high","super_high"].includes(next)?next:"high";try{localStorage.setItem("project-ai-thinking",thinkingLevel)}catch{}const labels={low:"Low",medium:"Medium",high:"High",super_high:"Super High"};$("thinkingCurrent").textContent=labels[thinkingLevel];document.querySelectorAll("[data-thinking]").forEach(b=>{const active=b.dataset.thinking===thinkingLevel;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active))})}
 document.querySelectorAll("[data-thinking]").forEach(b=>b.addEventListener("click",()=>setThinkingLevel(b.dataset.thinking)));setThinkingLevel(thinkingLevel);
 function renderWelcome(){
@@ -111,7 +125,7 @@ function renderProjects(){const list=$("projectList");if(!list)return;list.repla
 $("createProject").onclick=()=>{const name=prompt("Название проекта:");if(!name||!name.trim())return;const project={id:"p-"+Date.now().toString(36),name:name.trim().slice(0,48)};projects.push(project);activeProject=project.id;saveProjects();renderProjects();renderChatList();toast("Проект создан")};
 function renderChatList(){const list=$("chatList");list.replaceChildren();const q=($("chatSearch")?.value||"").trim().toLowerCase();chats.filter(chat=>(activeProject==="all"||(chatProjects[chat.id]||"all")===activeProject)&&(chat.title||"Новый чат").toLowerCase().includes(q)).forEach(chat=>{const row=document.createElement("div");row.className="chat-row"+(chat.id===chatId?" active":"");const open=document.createElement("button");open.className="chat-open";open.textContent=chat.title||"Новый чат";open.title=open.textContent;open.onclick=()=>openChat(chat.id);const actions=document.createElement("div");actions.className="chat-actions";const rename=document.createElement("button");rename.textContent="✎";rename.title="Переименовать";rename.onclick=()=>renameChat(chat);const del=document.createElement("button");del.textContent="×";del.title="Удалить";del.onclick=()=>deleteChat(chat);actions.append(rename,del);row.append(open,actions);list.append(row)})}
 function renderMessages(messages){$("messages").replaceChildren();if(!messages.length){renderWelcome();return}messages.forEach(m=>{let content=m.content,sources=[];if(typeof content==="string"&&content.startsWith("{")){try{const saved=JSON.parse(content);if(saved&&saved.__pa_message_v1===true){content=saved.text||"";sources=Array.isArray(saved.sources)?saved.sources:[]}}catch{}}bubble(content,m.role,false,sources)});$("messages").scrollTop=$("messages").scrollHeight}
-async function openChat(id){try{const data=await api("/api/chats/"+encodeURIComponent(id));chatId=id;activeProject=chatProjects[id]||"all";saveProjects();renderProjects();setMode();renderMessages(data.messages||[]);renderChatList();$("sidebar").classList.remove("open")}catch(e){toast(e.message)}}
+async function openChat(id){try{const data=await api("/api/chats/"+encodeURIComponent(id));chatId=id;activeProject=chatProjects[id]||"all";saveProjects();renderProjects();setMode();setMode(data.chat?.model==="cobalt"?"cobalt":"osmium");renderMessages(data.messages||[]);renderChatList();$("sidebar").classList.remove("open")}catch(e){toast(e.message)}}
 $("newChat").onclick=()=>{chatId=null;$("message").value="";renderMessages([]);renderChatList();$("message").focus();$("sidebar").classList.remove("open")};
 async function deleteChat(chat){if(!confirm(`Удалить чат «${chat.title}»? Переписка будет удалена.`))return;try{await api("/api/chats/"+encodeURIComponent(chat.id),{method:"DELETE"});chats=chats.filter(c=>c.id!==chat.id);if(chatId===chat.id){chatId=null;renderMessages([])}renderChatList()}catch(e){toast(e.message)}}
 function renameChat(chat){renameTarget=chat;$("renameInput").value=chat.title||"";$("renameDialog").showModal();$("renameInput").focus()}
@@ -125,7 +139,7 @@ $("message").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.p
 $("message").addEventListener("input",e=>{e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,180)+"px"});
 $("chatForm").onsubmit=async e=>{
  e.preventDefault();if(busy)return;const message=$("message").value.trim();if(!message)return;
- const requestMode="osmium";busy=true;$("send").disabled=true;$("send").textContent="Думаю...";
+ const requestMode=mode;busy=true;$("send").disabled=true;$("send").textContent="Думаю...";
  bubble(message,"user");
  $("message").value="";$("message").style.height="auto";
  const requestController=new AbortController();
@@ -137,11 +151,11 @@ $("chatForm").onsubmit=async e=>{
   const answer=bubble(data.reply,"assistant");
   if(data.imageDataURI)attachGeneratedImage(answer,data.imageDataURI);
   if(Array.isArray(data.sources)&&data.sources.length){const sourceBox=document.createElement("div");sourceBox.className="message-sources";const heading=document.createElement("strong");heading.textContent="Источники";sourceBox.append(heading);data.sources.forEach((source,index)=>{if(!source||typeof source.url!=="string"||!/^https?:\/\//i.test(source.url))return;const link=document.createElement("a");link.href=source.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent=(index+1)+". "+(source.title||source.url);sourceBox.append(link)});if(sourceBox.querySelector("a"))answer.append(sourceBox)}
-  const existing=chats.find(c=>c.id===chatId);if(existing){existing.updated_at=Date.now()/1000;existing.model="osmium"}else chats.unshift({id:chatId,title:message.slice(0,80)||"Новый чат",model:"osmium"});
+  const existing=chats.find(c=>c.id===chatId);if(existing){existing.updated_at=Date.now()/1000;existing.model=requestMode}else chats.unshift({id:chatId,title:message.slice(0,80)||"Новый чат",model:requestMode});
   renderChatList();
  }catch(err){const errorText=err.name==="AbortError"?"Превышено время ожидания ответа (100 секунд). Проверь соединение и попробуй ещё раз.":err.message;bubble("Ошибка: "+errorText+(err.code?" ["+err.code+"]":""),"assistant",true);toast(errorText+(err.code?" · "+err.code:""))}
  finally{clearTimeout(requestTimeout);busy=false;$("send").disabled=false;$("send").textContent="Отправить ↑";$("message").focus()}
 };
 async function health(){try{const data=await api("/api/health");$("healthDot").className=data.serviceConfigured?"ok":"bad";$("healthText").textContent=data.serviceConfigured?"Сервис готов":"Сервис не настроен"}catch{$("healthDot").className="bad";$("healthText").textContent="Нет соединения · PA-001"}}
-renderTokenUsage();setMode();checkSession();health();
+renderTokenUsage();setMode(mode);checkSession();health();
 })();
