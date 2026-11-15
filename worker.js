@@ -332,10 +332,90 @@ function buildImagePrompt(message) {
     "User's original request: " + original;
 }
 
+
+const TEXT_PROVIDER_PLAN = [
+  { id: "groq", label: "Groq", envKey: "GROQ_API_KEY", url: "https://api.groq.com/openai/v1/chat/completions", model: "openai/gpt-oss-120b", contextWindow: 131072 },
+  { id: "cloudflare", label: "Workers AI", model: "@cf/google/gemma-4-26b-a4b-it", contextWindow: 131072 },
+  { id: "sambanova", label: "SambaNova", envKey: "SAMBANOVA_API_KEY", url: "https://api.sambanova.ai/v1/chat/completions", model: "DeepSeek-V3.1", contextWindow: 131072 },
+  { id: "mistral", label: "Mistral", envKey: "MISTRAL_API_KEY", url: "https://api.mistral.ai/v1/chat/completions", model: "mistral-small-latest", contextWindow: 131072 },
+  { id: "openrouter", label: "OpenRouter", envKey: "OPENROUTER_API_KEY", url: "https://openrouter.ai/api/v1/chat/completions", model: "openrouter/free", contextWindow: null }
+];
+
+function getTextProviderStatus(env) {
+  return TEXT_PROVIDER_PLAN.map(provider => ({
+    id: provider.id,
+    name: provider.label,
+    configured: provider.id === "cloudflare" ? Boolean(env.AI) : Boolean(env[provider.envKey])
+  }));
+}
+
+async function callTextProvider(env, messages, maxTokens, tools = []) {
+  const failures = [];
+  for (const provider of TEXT_PROVIDER_PLAN) {
+    if (provider.id === "cloudflare" ? !env.AI : !env[provider.envKey]) continue;
+    try {
+      let completion;
+      if (provider.id === "cloudflare") {
+        completion = await env.AI.run(provider.model, {
+          messages,
+          max_tokens: maxTokens,
+          ...(tools.length ? { tools } : {})
+        }, tools.length ? { gateway: { id: "default" } } : undefined);
+      } else {
+        const payload = { model: provider.model, messages, max_tokens: maxTokens };
+        if (tools.length) {
+          payload.tools = tools;
+          payload.tool_choice = "auto";
+        }
+        const response = await fetch(provider.url, {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer " + env[provider.envKey],
+            "Content-Type": "application/json",
+            ...(provider.id === "openrouter" ? { "X-Title": "CLYRO" } : {})
+          },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(25000)
+        });
+        if (!response.ok) {
+          failures.push(provider.id + ":" + response.status);
+          console.warn("AI provider unavailable", provider.id, response.status);
+          continue;
+        }
+        completion = await response.json();
+      }
+      const message = completion?.choices?.[0]?.message;
+      const hasText = typeof message?.content === "string" ||
+        (Array.isArray(message?.content) && message.content.some(part => typeof part?.text === "string"));
+      const hasTools = Array.isArray(message?.tool_calls) && message.tool_calls.length > 0;
+      const hasLegacyText = typeof completion?.response === "string" && completion.response.length > 0;
+      if (!hasText && !hasTools && !hasLegacyText) {
+        failures.push(provider.id + ":empty");
+        continue;
+      }
+      return {
+        completion,
+        provider: provider.label,
+        providerId: provider.id,
+        model: completion?.model || provider.model,
+        contextWindow: provider.contextWindow
+      };
+    } catch (e) {
+      failures.push(provider.id + ":" + (e?.name === "AbortError" ? "timeout" : "network"));
+      console.warn("AI provider request failed", provider.id, e?.name || "error");
+    }
+  }
+  const failure = new Error("All configured AI providers are unavailable.");
+  failure.status = 503;
+  failure.providerFailures = failures;
+  throw failure;
+}
+
 async function handleApi(request, env, path) {
   if (!env.DB) return error("На Worker не настроен D1 binding DB.", 500);
   if (path === "/api/health" && request.method === "GET") {
-    return json({ ok: true, database: true, serviceConfigured: Boolean(env.AI), provider: "Cloudflare Workers AI", model: "@cf/google/gemma-4-26b-a4b-it" });
+    const providers = getTextProviderStatus(env);
+    return json({ ok: true, database: true, serviceConfigured: providers.some(item => item.configured), providers });
   }
   if (path === "/api/register" && request.method === "POST") {
     let data;
@@ -431,7 +511,7 @@ async function handleApi(request, env, path) {
 
 
   if (path === "/api/chat" && request.method === "POST") {
-    if (!env.AI) return error("Workers AI не подключён. Проверь AI binding в настройках Cloudflare Worker. Код PA-201.", 503, "PA-201");
+    if (!getTextProviderStatus(env).some(item => item.configured)) return error("Не подключён ни один ИИ-провайдер. Добавь API-ключи в Secrets или включи Workers AI.", 503, "PA-201");
     let data;
     try { data = await bodyJson(request); } catch { return error("Не удалось прочитать запрос. Проверь размер сообщения и изображений.", 400); }
     const mode = MODES[data.mode] ? data.mode : "apricity";
@@ -484,6 +564,7 @@ async function handleApi(request, env, path) {
       // Gemma 4 supports text, vision, and function calling.
       // Automatic task router: image requests go to FLUX; all other requests use the selected chat mode.
       if (isImageGenerationRequest(message)) {
+        if (!env.AI) return error("Генерация изображений пока недоступна: не настроен Workers AI.", 503, "PA-201");
         const imagePrompt = buildImagePrompt(message);
         const generatedImage = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
           prompt: imagePrompt,
@@ -517,7 +598,6 @@ async function handleApi(request, env, path) {
           model: "@cf/black-forest-labs/flux-1-schnell"
         });
       }
-      const model = "@cf/google/gemma-4-26b-a4b-it";
       const webSearchEnabled = enabledPlugins.includes("web_search");
       const webSearchTools = webSearchEnabled ? [{
         type: "function",
@@ -531,17 +611,16 @@ async function handleApi(request, env, path) {
           }
         }
       }] : [];
-      const modelOptions = webSearchEnabled ? { gateway: { id: "default" } } : undefined;
       let finalRequestMessages = requestMessages;
+      let lastRoute = null;
       if (deepThinking) {
         const prepTokens = thinkingLevel === "super_high" ? 1200 : 700;
-        const prep = await env.AI.run(model, {
-          messages: [
-            { role: "system", content: systemPrompt + "\n\nПОДГОТОВИТЕЛЬНЫЙ ЭТАП: не давай пользователю ответ. Составь краткую рабочую записку: цель задачи, важные исходные данные, допущения, что нужно проверить и возможные крайние случаи. Не раскрывай скрытую цепочку рассуждений. Будь конкретным и кратким." },
-            { role: "user", content: currentMessageContent }
-          ],
-          max_tokens: prepTokens
-        });
+        const prepRoute = await callTextProvider(env, [
+          { role: "system", content: systemPrompt + "\n\nПОДГОТОВИТЕЛЬНЫЙ ЭТАП: не давай пользователю ответ. Составь краткую рабочую записку: цель задачи, важные исходные данные, допущения, что нужно проверить и возможные крайние случаи. Не раскрывай скрытую цепочку рассуждений. Будь конкретным и кратким." },
+          { role: "user", content: currentMessageContent }
+        ], prepTokens);
+        lastRoute = prepRoute;
+        const prep = prepRoute.completion;
         const prepText = typeof prep?.choices?.[0]?.message?.content === "string"
           ? prep.choices[0].message.content
           : typeof prep?.response === "string" ? prep.response : "";
@@ -552,11 +631,10 @@ async function handleApi(request, env, path) {
           ];
         }
       }
-      let completion = await env.AI.run(model, {
-        messages: finalRequestMessages,
-        max_tokens: Math.max(mode === "axiom" ? 4096 : 0, ({ low: 1000, medium: 1600, high: 2600, super_high: 4096 })[thinkingLevel]),
-        ...(webSearchEnabled ? { tools: webSearchTools } : {})
-      }, modelOptions);
+      lastRoute = await callTextProvider(env, finalRequestMessages,
+        Math.max(mode === "axiom" ? 4096 : 0, ({ low: 1000, medium: 1600, high: 2600, super_high: 4096 })[thinkingLevel]),
+        webSearchEnabled ? webSearchTools : []);
+      let completion = lastRoute.completion;
       const initialMessage = completion?.choices?.[0]?.message;
       const toolCalls = completion?.tool_calls || initialMessage?.tool_calls || [];
       const searchCall = toolCalls.find(call =>
@@ -585,20 +663,19 @@ async function handleApi(request, env, path) {
             console.error("Cloudflare Web Search failed", searchError?.message || "unknown error");
             return error("Веб-поиск не запустился. Проверь AI Gateway: нужны кредиты или API-ключ провайдера (Exa/Ceramic/Linkup). Код PA-211.", 503, "PA-211");
           }
-          completion = await env.AI.run(model, {
-            messages: [
-              ...finalRequestMessages,
-              {
-                role: "tool",
-                name: "web_search",
-                content: JSON.stringify({
-                  items: searchItems,
-                  metadata: searchResults?.metadata || {}
-                })
-              }
-            ],
-            max_tokens: Math.max(mode === "axiom" ? 4096 : 0, ({ low: 1000, medium: 1600, high: 2600, super_high: 4096 })[thinkingLevel])
-          }, { gateway: { id: "default" } });
+          lastRoute = await callTextProvider(env, [
+            ...finalRequestMessages,
+            {
+              role: "tool",
+              ...(searchCall?.id ? { tool_call_id: searchCall.id } : {}),
+              name: "web_search",
+              content: JSON.stringify({
+                items: searchItems,
+                metadata: searchResults?.metadata || {}
+              })
+            }
+          ], Math.max(mode === "axiom" ? 4096 : 0, ({ low: 1000, medium: 1600, high: 2600, super_high: 4096 })[thinkingLevel]));
+          completion = lastRoute.completion;
         }
       }
       if (deepThinking && thinkingLevel === "super_high") {
@@ -609,14 +686,12 @@ async function handleApi(request, env, path) {
             ? draftMessage.content.map(part => typeof part?.text === "string" ? part.text : "").join("")
             : typeof completion?.response === "string" ? completion.response : "";
         if (draftText.trim()) {
-          completion = await env.AI.run(model, {
-            messages: [
-              { role: "system", content: systemPrompt + "\n\nФИНАЛЬНАЯ НЕЗАВИСИМАЯ ПРОВЕРКА: перед тобой черновик ответа. Проверь фактическую точность, логику, полноту, противоречия и крайние случаи. Исправь обнаруженные проблемы и верни только готовый ответ пользователю. Не перечисляй скрытые рассуждения. Не добавляй факты, которых нет в исходных данных. Если использовался веб-поиск, не приписывай источникам то, чего в них нет, и сохрани уместные URL." },
-              { role: "user", content: currentMessageContent },
-              { role: "assistant", content: draftText }
-            ],
-            max_tokens: 4096
-          }, modelOptions);
+          lastRoute = await callTextProvider(env, [
+            { role: "system", content: systemPrompt + "\n\nФИНАЛЬНАЯ НЕЗАВИСИМАЯ ПРОВЕРКА: перед тобой черновик ответа. Проверь фактическую точность, логику, полноту, противоречия и крайние случаи. Исправь обнаруженные проблемы и верни только готовый ответ пользователю. Не перечисляй скрытые рассуждения. Не добавляй факты, которых нет в исходных данных. Если использовался веб-поиск, не приписывай источникам то, чего в них нет, и сохрани уместные URL." },
+            { role: "user", content: currentMessageContent },
+            { role: "assistant", content: draftText }
+          ], 4096);
+          completion = lastRoute.completion;
         }
       }
       const assistantMessage = completion?.choices?.[0]?.message;
@@ -635,25 +710,25 @@ async function handleApi(request, env, path) {
           description: safeText(item.description, 500)
         }));
       if (!reply.trim()) {
-        console.error("Workers AI returned no text", assistantMessage?.refusal || completion?.choices?.[0]?.finish_reason || "empty response");
-        return error("Workers AI вернул пустой ответ. Попробуй изменить запрос. Код PA-206.", 502, "PA-206");
+        console.error("AI providers returned no text", assistantMessage?.refusal || completion?.choices?.[0]?.finish_reason || "empty response");
+        return error("ИИ-провайдеры не вернули текст. Попробуй изменить запрос. Код PA-206.", 502, "PA-206");
       }
-      const actualModel = model;
-      // Conservative effective context ceiling for the current Workers AI deployment.
-      const contextWindowTokens = 131072;
+      const actualModel = lastRoute?.model || "unknown";
+      const actualProvider = lastRoute?.provider || "unknown";
+      const contextWindowTokens = lastRoute?.contextWindow || null;
       const outputTokenBudget = Math.max(mode === "axiom" ? 4096 : 0,
         ({ low: 1000, medium: 1600, high: 2600, super_high: 4096 })[thinkingLevel]);
       const promptTokensUsed = Number.isFinite(completion?.usage?.prompt_tokens)
         ? completion.usage.prompt_tokens : null;
-      const remainingContextTokens = promptTokensUsed === null
+      const remainingContextTokens = promptTokensUsed === null || contextWindowTokens === null
         ? null : Math.max(0, contextWindowTokens - promptTokensUsed - outputTokenBudget);
       const tokenQuestion = /(?:сколько|какое|каков).{0,45}(?:токен\w*|контекст\w*).{0,35}(?:остал\w*|свободн\w*|доступн\w*)|(?:токен\w*|контекст\w*).{0,35}(?:остал\w*|свободн\w*|доступн\w*)|how many.{0,35}tokens?.{0,35}(?:left|remain|available)/i.test(message);
       if (tokenQuestion) {
         reply = remainingContextTokens === null
-          ? "Сейчас точная статистика токенов недоступна, поэтому я не буду придумывать число. Попробуй спросить ещё раз чуть позже."
-          : "По статистике последнего запроса использовано " + promptTokensUsed.toLocaleString("ru-RU") +
+          ? "Сейчас точная статистика токенов контекста недоступна, поэтому я не буду придумывать число. Попробуй спросить ещё раз чуть позже."
+          : "Последний запрос обработал " + actualProvider + ". Использовано " + promptTokensUsed.toLocaleString("ru-RU") +
             " входных токенов. Свободно примерно " + remainingContextTokens.toLocaleString("ru-RU") +
-            " токенов контекста (из расчётного лимита 131 072), с учётом резерва на ответ. Это не остаток дневного лимита.";
+            " токенов контекста (из лимита " + contextWindowTokens.toLocaleString("ru-RU") + "), с учётом резерва на ответ. Это не дневной лимит.";
       }
       const now = Math.floor(Date.now() / 1000);
       const userText = message;
@@ -674,7 +749,7 @@ async function handleApi(request, env, path) {
           .bind(now + 1, mode, chatId, user.id)
       ]);
       return json({
-        chatId, reply: reply.trim(), mode, sources, provider: "Cloudflare Workers AI", model: actualModel,
+        chatId, reply: reply.trim(), mode, sources, provider: actualProvider, model: actualModel,
         tokenUsage: {
           contextWindow: contextWindowTokens,
           promptTokens: promptTokensUsed,
@@ -685,23 +760,11 @@ async function handleApi(request, env, path) {
       });
     } catch (e) {
       const status = Number(e?.status || e?.statusCode || e?.response?.status || 0);
-      console.error("Workers AI request failed", status || "unknown", e?.message || "unknown error");
+      console.error("AI provider chain failed", status || "unknown", e?.providerFailures || e?.name || "unknown error");
       if (e?.name === "AbortError" || /timeout/i.test(e?.message || "")) {
-        return error("Workers AI не ответил вовремя. Попробуй ещё раз. Код PA-205.", 504, "PA-205");
+        return error("ИИ-провайдеры не ответили вовремя. Попробуй ещё раз. Код PA-205.", 504, "PA-205");
       }
-      if (status === 401 || status === 403) {
-        return error("Cloudflare отклонил доступ к Workers AI. Проверь AI binding и доступность модели. Код PA-202.", 502, "PA-202");
-      }
-      if (status === 402 || status === 429) {
-        return error("Дневной бесплатный лимит Workers AI исчерпан или сервис ограничил запросы. Попробуй после сброса лимита. Код PA-203.", 429, "PA-203");
-      }
-      if (status === 400 || status === 404) {
-        return error("Workers AI не принял запрос или параметры модели. Код PA-206.", 502, "PA-206");
-      }
-      if (status === 502 || status === 503 || status === 504) {
-        return error("Workers AI временно недоступен. Попробуй позже. Код PA-204.", 503, "PA-204");
-      }
-      return error("Не удалось получить ответ от Workers AI. Проверь Cloudflare Logs. Код PA-299.", 502, "PA-299");
+      return error("Сейчас все подключённые ИИ-провайдеры недоступны. Попробуй позже. Код PA-204.", 503, "PA-204");
     }
   }
   return error("API-маршрут не найден.", 404);
