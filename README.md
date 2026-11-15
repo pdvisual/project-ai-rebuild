@@ -106,3 +106,17 @@ Wrangler конфигурация содержит AI binding и использ�
 | PA-299 | Общая ошибка обработки |
 | PA-301 | Внутренняя ошибка или база данных |
 | PA-999 | Не классифицированная ошибка |
+
+
+## OSMIUM 1.0 (official CLYRO model)
+
+CLYRO uses one text model only: `openai/gpt-oss-120b` through the Groq Chat Completions API. There is no automatic provider fallback.
+
+Configure the key locally in `.dev.vars` (see `.dev.vars.example`) or add it to Cloudflare Workers as a secret:
+
+```sh
+npx wrangler secret put GROQ_API_KEY
+npm run deploy
+```
+
+Keep the Groq key out of browser code, committed files, and chat messages. Groq rate limits are shared by all users of this CLYRO deployment; HTTP 429 responses mean the account must wait for its quota window to reset.
