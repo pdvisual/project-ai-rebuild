@@ -536,7 +536,7 @@ async function handleApi(request, env, path) {
 
 
   if (path === "/api/chat" && request.method === "POST") {
-    if (!getTextProviderStatus(env).some(item => item.configured)) return error("Не подключён ни один ИИ-провайдер. Добавь API-ключи в Secrets или включи Workers AI.", 503, "CL-201");
+    if (!getTextProviderStatus(env).some(item => item.configured)) return error("Сервис ещё не готов к работе. Попробуй позже. Код CL-201.", 503, "CL-201");
     let data;
     try { data = await bodyJson(request); } catch { return error("Не удалось прочитать запрос. Проверь размер сообщения и изображений.", 400); }
     const mode = MODES[data.mode] ? data.mode : "nuvex";
@@ -686,7 +686,7 @@ async function handleApi(request, env, path) {
             searchItems = Array.isArray(searchResults?.items) ? searchResults.items : [];
           } catch (searchError) {
             console.error("Cloudflare Web Search failed", searchError?.message || "unknown error");
-            return error("Веб-поиск не запустился. Проверь AI Gateway: нужны кредиты или API-ключ провайдера (Exa/Ceramic/Linkup). Код CL-211.", 503, "CL-211");
+            return error("Поиск временно недоступен. Попробуй позже. Код CL-211.", 503, "CL-211");
           }
           lastRoute = await callTextProvider(env, [
             ...finalRequestMessages,
