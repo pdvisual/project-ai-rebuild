@@ -298,7 +298,7 @@ async function buildProjectDeltaContext(userMessage) {
 function isImageGenerationRequest(message) {
   const text = String(message || "").toLowerCase().trim();
   if (!text || /как (?:мне )?(?:сгенерировать|создать|нарисовать)|how (?:do i|to) (?:generate|create|draw)/i.test(text)) return false;
-  return /(?:^|[\\s,])(?:нарисуй|изобрази|сгенерируй|создай|сделай|нарисовать|сгенерировать|создать)\\s+(?:(?:мне|нам)\\s+)?(?:(?:картинк\\w*|изображени\\w*|фото|арт|иллюстраци\\w*|обложк\\w*|логотип\\w*|аватар\\w*)|(?:image|picture|photo|artwork|illustration|cover|logo|avatar))(?:$|[\\s,:])/i.test(text)
+  return /(?:^|[\\s,])(?:нарисуй|изобрази)\\s+|(?:^|[\\s,])(?:сгенерируй|создай|сделай|нарисовать|сгенерировать|создать)\\s+(?:(?:мне|нам)\\s+)?(?:(?:картинк\\w*|изображени\\w*|фото|арт|иллюстраци\\w*|обложк\\w*|логотип\\w*|аватар\\w*)|(?:image|picture|photo|artwork|illustration|cover|logo|avatar))(?:$|[\\s,:])/i.test(text)
     || /(?:generate|create|draw|make)\\s+(?:me\\s+)?(?:an?\\s+)?(?:image|picture|photo|artwork|illustration|cover|logo|avatar)\\b/i.test(text)
     || /(?:картинк\\w*|изображени\\w*|фото|иллюстраци\\w*|обложк\\w*|логотип\\w*|аватар\\w*)\\s+(?:в стиле|с изображением|где|на которой|с надписью)/i.test(text);
 }
@@ -467,7 +467,7 @@ async function handleApi(request, env, path) {
         const now = Math.floor(Date.now() / 1000);
         if (!chat) {
           chatId = uuid();
-          const title = userText.slice(0, 80) || "Новый чат";
+          const title = message.slice(0, 80) || "Новый чат";
           await env.DB.prepare("INSERT INTO chats (id,user_id,title,model,created_at,updated_at) VALUES (?,?,?,?,?,?)")
             .bind(chatId, user.id, title, mode, now, now).run();
         }
