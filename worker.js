@@ -330,6 +330,18 @@ function buildImagePrompt(message) {
 }
 
 
+async function fetchSearchResultPage(url, allowedUrls) {
+  let parsed;
+  try { parsed = new URL(url); } catch { throw new Error('Некорректная ссылка.'); }
+  if (parsed.protocol !== 'https:' || !allowedUrls.includes(parsed.href)) throw new Error('Можно открывать только HTTPS-ссылки из результатов веб-поиска.');
+  const response = await fetch(parsed.href, { method: 'GET', redirect: 'error', headers: { Accept: 'text/html,text/plain,application/xhtml+xml', 'User-Agent': 'CLYRO-WebReader/1.0' }, signal: AbortSignal.timeout(12000) });
+  if (!response.ok) throw new Error('Страница ответила HTTP ' + response.status);
+  const type = response.headers.get('content-type') || '';
+  if (!/text\/html|text\/plain|application\/xhtml\+xml/i.test(type)) throw new Error('Ссылка ведёт не на HTML- или текстовую страницу.');
+  let body = (await response.text()).slice(0, 180000);
+  if (/html|xhtml/i.test(type)) body = body.replace(/<(script|style|noscript|svg|nav|footer|header)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ');
+  return body.replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&#39;|&apos;/gi, "'").replace(/[ \t]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 12000);
+}
 const TEXT_PROVIDER_PLAN = [
   {
     id: "groq",
@@ -599,84 +611,57 @@ async function handleApi(request, env, path) {
           model: "@cf/black-forest-labs/flux-1-schnell"
         });
       }
-      const webSearchEnabled = enabledPlugins.includes("web_search");
-      const webSearchTools = webSearchEnabled ? [{
-        type: "function",
-        function: {
-          name: "web_search",
-          description: "Search the public web for current information, recent events, documentation, releases, prices, or facts that need verification. Return source URLs.",
-          parameters: {
-            type: "object",
-            properties: { query: { type: "string", description: "A concise web search query, maximum 1024 characters." } },
-            required: ["query"]
-          }
-        }
-      }] : [];
+      const webSearchEnabled = enabledPlugins.includes("web_search") && Boolean(env.AI?.websearch);
+      const webTools = webSearchEnabled ? [
+        { type: "function", function: { name: "web_search", description: "Search the public internet for up-to-date facts, news, game patches, documentation, prices, and current information. Use when freshness or verification matters.", parameters: { type: "object", properties: { query: { type: "string", description: "A concise search query, maximum 1024 characters." } }, required: ["query"] } } },
+        { type: "function", function: { name: "web_fetch", description: "Open and read an exact HTTPS URL returned by web_search in this conversation. Read sources before summarizing.", parameters: { type: "object", properties: { url: { type: "string" } }, required: ["url"] } } }
+      ] : [];
       let finalRequestMessages = requestMessages;
       let lastRoute = null;
-      if (deepThinking) {
-        const prepTokens = Math.min(modelConfig.maxTokens, thinkingLevel === "super_high" ? 1200 : 700);
-        const prepRoute = await callTextProvider(env, [
-          { role: "system", content: systemPrompt + "\n\nПОДГОТОВИТЕЛЬНЫЙ ЭТАП: не давай пользователю ответ. Составь краткую рабочую записку: цель задачи, важные исходные данные, допущения, что нужно проверить и возможные крайние случаи. Не раскрывай скрытую цепочку рассуждений. Будь конкретным и кратким." },
-          { role: "user", content: currentMessageContent }
-        ], prepTokens, [], ["groq"], reasoningEffortFor(thinkingLevel));
-        lastRoute = prepRoute;
-        const prep = prepRoute.completion;
-        const prepText = typeof prep?.choices?.[0]?.message?.content === "string"
-          ? prep.choices[0].message.content
-          : typeof prep?.response === "string" ? prep.response : "";
-        if (prepText.trim()) {
-          finalRequestMessages = [
-            ...requestMessages,
-            { role: "system", content: "ВНУТРЕННЯЯ РАБОЧАЯ ЗАПИСКА ДЛЯ ЭТОГО ОТВЕТА (не цитируй её пользователю):\\n" + prepText.slice(0, 7000) }
-          ];
-        }
-      }
-      lastRoute = await callTextProvider(env, finalRequestMessages,
-        Math.min(OSMIUM.maxTokens, ({ low: 1000, medium: 1600, high: 2600, super_high: 6000 })[thinkingLevel]),
-        webSearchEnabled ? webSearchTools : [], ["groq"], reasoningEffortFor(thinkingLevel));
-      let completion = lastRoute.completion;
-      const initialMessage = completion?.choices?.[0]?.message;
-      const toolCalls = completion?.tool_calls || initialMessage?.tool_calls || [];
-      const searchCall = toolCalls.find(call =>
-        (call?.name || call?.function?.name) === "web_search"
-      );
+      let completion = null;
       let searchItems = [];
-      if (searchCall) {
-        let argumentsValue = searchCall.arguments ?? searchCall.function?.arguments ?? {};
-        if (typeof argumentsValue === "string") {
-          try { argumentsValue = JSON.parse(argumentsValue); } catch { argumentsValue = {}; }
-        }
-        const searchQuery = safeText(argumentsValue?.query, 1024);
-        if (searchQuery) {
-          let searchResults;
-          try {
-            const searchResponse = await env.AI.websearch({
-              gatewayId: "default",
-              query: searchQuery,
-              provider: "exa",
-              limit: 5
-            });
-            if (!searchResponse.ok) throw new Error("Web Search API HTTP " + searchResponse.status);
-            searchResults = await searchResponse.json();
-            searchItems = Array.isArray(searchResults?.items) ? searchResults.items : [];
-          } catch (searchError) {
-            console.error("Cloudflare Web Search failed", searchError?.message || "unknown error");
-            return error("Поиск временно недоступен. Попробуй позже. Код CL-211.", 503, "CL-211");
-          }
-          lastRoute = await callTextProvider(env, [
-            ...finalRequestMessages,
-            {
-              role: "tool",
-              ...(searchCall?.id ? { tool_call_id: searchCall.id } : {}),
-              name: "web_search",
-              content: JSON.stringify({
-                items: searchItems,
-                metadata: searchResults?.metadata || {}
-              })
+      let pendingMessages = [...finalRequestMessages];
+      const maxWebToolRounds = webSearchEnabled ? 3 : 0;
+      for (let round = 0; round <= maxWebToolRounds; round++) {
+        lastRoute = await callTextProvider(env, pendingMessages,
+          Math.min(modelConfig.maxTokens, ({ low: 1000, medium: 1600, high: 2600, super_high: 6000 })[thinkingLevel]),
+          round < maxWebToolRounds ? webTools : [], ["groq"], reasoningEffortFor(thinkingLevel));
+        completion = lastRoute.completion;
+        const assistantMessage = completion?.choices?.[0]?.message;
+        const toolCalls = assistantMessage?.tool_calls || completion?.tool_calls || [];
+        if (!toolCalls.length || round === maxWebToolRounds) break;
+        pendingMessages = [...pendingMessages, { role: "assistant", content: assistantMessage?.content ?? null, tool_calls: toolCalls }];
+        for (const call of toolCalls) {
+          const toolName = call?.function?.name || call?.name || "";
+          let args = call?.function?.arguments ?? call?.arguments ?? {};
+          if (typeof args === "string") { try { args = JSON.parse(args); } catch { args = {}; } }
+          let toolContent = "";
+          if (toolName === "web_search") {
+            const query = safeText(args?.query, 1024);
+            if (!query) toolContent = JSON.stringify({ error: "Пустой поисковый запрос." });
+            else {
+              try {
+                const response = await env.AI.websearch({ gatewayId: "default", query, provider: "exa", limit: 5 });
+                if (!response.ok) throw new Error("Web Search API HTTP " + response.status);
+                const result = await response.json();
+                const found = Array.isArray(result?.items) ? result.items : [];
+                searchItems.push(...found);
+                toolContent = JSON.stringify({ items: found.map(item => ({ title: safeText(item?.title, 240), url: safeText(item?.url, 2000), description: safeText(item?.description, 900) })), metadata: result?.metadata || {} });
+              } catch (searchError) {
+                console.error("Cloudflare Web Search failed", searchError?.message || "unknown error");
+                toolContent = JSON.stringify({ error: "Поиск временно недоступен. Сообщи об этом пользователю и не выдумывай результаты." });
+              }
             }
-          ], Math.min(OSMIUM.maxTokens, ({ low: 1000, medium: 1600, high: 2600, super_high: 6000 })[thinkingLevel]), [], ["groq"], reasoningEffortFor(thinkingLevel));
-          completion = lastRoute.completion;
+          } else if (toolName === "web_fetch") {
+            const url = safeText(args?.url, 2000);
+            const allowedUrls = searchItems.filter(item => item && typeof item.url === "string" && /^https:\/\//i.test(item.url)).map(item => { try { return new URL(item.url).href; } catch { return ""; } }).filter(Boolean);
+            try {
+              if (!url) throw new Error("Не указана ссылка.");
+              const pageText = await fetchSearchResultPage(url, allowedUrls);
+              toolContent = JSON.stringify({ url, content: pageText });
+            } catch (fetchError) { toolContent = JSON.stringify({ url, error: safeText(fetchError?.message || "Не удалось прочитать страницу.", 500) }); }
+          } else toolContent = JSON.stringify({ error: "Неизвестный инструмент." });
+          pendingMessages.push({ role: "tool", ...(call?.id ? { tool_call_id: call.id } : {}), name: toolName, content: toolContent });
         }
       }
       if (deepThinking && thinkingLevel === "super_high") {
