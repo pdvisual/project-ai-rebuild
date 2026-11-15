@@ -427,7 +427,7 @@ async function handleApi(request, env, path) {
   if (!env.DB) return error("На Worker не настроен D1 binding DB.", 500);
   if (path === "/api/health" && request.method === "GET") {
     const providers = getTextProviderStatus(env);
-    return json({ ok: true, database: true, serviceConfigured: providers.some(item => item.configured), webSearchAvailable: Boolean(env.GROQ_API_KEY), webSearchProvider: "Groq Browser Search", providers });
+    return json({ ok: true, database: true, serviceConfigured: providers.some(item => item.configured), webSearchAvailable: Boolean(env.GROQ_API_KEY), webSearchProvider: "Groq Browser Search", factCheckVersion: "esports-search-required-1", providers });
   }
   if (path === "/api/register" && request.method === "POST") {
     let data;
