@@ -502,7 +502,7 @@ async function handleApi(request, env, path) {
     let data;
     try { data = await bodyJson(request); } catch { return error("Некорректный запрос."); }
     const title = safeText(data.title, 100) || "Новый чат";
-    const model = MODES[data.model] ? data.model : "apricity";
+    const model = MODES[data.model] ? data.model : "nuvex";
     const id = uuid();
     const now = Math.floor(Date.now() / 1000);
     await env.DB.prepare("INSERT INTO chats (id,user_id,title,model,created_at,updated_at) VALUES (?,?,?,?,?,?)")
@@ -699,7 +699,7 @@ async function handleApi(request, env, path) {
                 metadata: searchResults?.metadata || {}
               })
             }
-          ], Math.max(MODES[mode].maxTokens, ({ low: 1000, medium: 1600, high: 2600, super_high: 4096 })[thinkingLevel]));
+          ], Math.min(MODES[mode].maxTokens, ({ low: 1000, medium: 1600, high: 2600, super_high: 6000 })[thinkingLevel]), [], MODES[mode].providers);
           completion = lastRoute.completion;
         }
       }
