@@ -179,4 +179,74 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 }
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 .no-animations *, .no-animations *:before, .no-animations *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
-\n.message-text a{color:#d8d8d8;text-decoration:underline;text-decoration-color:#666;text-underline-offset:3px;overflow-wrap:anywhere;cursor:pointer}\n.message-text a:hover{color:#fff;text-decoration-color:#fff}\n.message-text a:focus-visible{outline:2px solid #aaa;outline-offset:3px;border-radius:2px}\n
+
+.message-text a{color:#d8d8d8;text-decoration:underline;text-decoration-color:#666;text-underline-offset:3px;overflow-wrap:anywhere;cursor:pointer}
+.message-text a:hover{color:#fff;text-decoration-color:#fff}
+.message-text a:focus-visible{outline:2px solid #aaa;outline-offset:3px;border-radius:2px}
+
+
+/* Project AI — warm black & gold visual refresh */
+:root{
+  --accent:#d6a647;
+  --gold:#d6a647;
+  --gold-bright:#e7bd68;
+  --line:#332b1d;
+  --line-soft:#242018;
+}
+body,.app,.main{background:radial-gradient(ellipse at 72% 38%,rgba(177,133,42,.075),transparent 36%),#090909}
+.sidebar{background:#0e0e0e;border-right-color:#29251d}
+.brand{font-family:Manrope,Inter,sans-serif;color:#eee5d4}
+.brand span{color:#d6a647}
+.new-chat,.primary,.send-button{
+  background:linear-gradient(135deg,#bd8d35,#e4b95e);
+  color:#171108;border-color:#c99a42;font-weight:750;
+  box-shadow:0 5px 20px #bd8d3518
+}
+.new-chat:hover,.primary:hover,.send-button:hover{
+  background:linear-gradient(135deg,#d4a448,#f0ca75);
+  border-color:#e7bd68;color:#171108
+}
+.topbar{background:#0b0b0acc;border-bottom-color:#29251d}
+.model-picker:hover,.model-picker[aria-expanded=true],
+.model-option:hover,.model-option.selected{background:#211a0e;border-color:#6b5125}
+.model-option.selected .model-option-icon{border-color:#80602a;color:#e7bd68}
+.model-option-icon{border-color:#393020}
+.model-check{color:#e7bd68}
+.mode-heading{color:#e8dfcf}
+.picker-chevron,.provider-note{color:#948a78}
+.settings-open:hover{color:#e7bd68}
+.top-status i{background:#d6a647;box-shadow:0 0 10px #d6a64770}
+.messages{scrollbar-color:#493a20 transparent}
+.welcome-icon{background:linear-gradient(145deg,#3a2b13,#17130c);border-color:#715522;color:#dfaf51;box-shadow:0 0 35px #cfa13e1f}
+.welcome h1{color:#f2ede3}
+.message.user{background:#211b11;border-color:#40321a;color:#f0e4ce}
+.message.assistant{background:linear-gradient(135deg,#151512,#111110);border:1px solid #302d26}
+.message.assistant:before{border-color:#594522;background:#211a0e;color:#dfaf51}
+.composer{background:#141311;border-color:#57451f;box-shadow:0 10px 35px #0005,0 0 0 1px #d1a33e0a}
+.composer:focus-within{border-color:#b48a3c;box-shadow:0 0 0 3px #d6a64712,0 10px 35px #0005}
+.composer textarea::placeholder{color:#777169}
+.attach{color:#c19a4d}
+.attach:hover{color:#f0c66e;background:#211a0e}
+.chat-row:hover,.chat-row.active{background:#211b11}
+.chat-open:hover,.chat-row.active .chat-open{background:#211b11;border-color:#3b2e18;color:#e8c16b}
+.chat-actions button:hover{color:#d6a647}
+.account{border-top-color:#29251d}
+.auth-screen{background:radial-gradient(circle at 50% 38%,rgba(190,145,54,.11),transparent 34%),#090909}
+.auth-card{background:linear-gradient(145deg,#171613,#10100f);border-color:#393020;box-shadow:0 24px 90px #0009,0 0 55px #bd8c3010}
+.auth-tabs{border-color:#302b20;background:#0c0c0b}
+.auth-tabs button.active{background:#302515;border-color:#6c5124;color:#f0c66e}
+.field input,.dialog input,.memory-notes{background:#0b0b0a;border-color:#39352d}
+.field input:focus,.dialog input:focus,.memory-notes:focus{border-color:#d6a647}
+.dialog,.settings-dialog{background:#151411;border-color:#554322}
+.dialog::backdrop{background:#000b}
+.settings-section,.account{border-color:#29251d}
+.switch input:checked+span{background:#d6a647}
+.switch input:checked+span:before{background:#171108}
+.toast{background:#211b11;border-color:#594522;color:#f0d49b}
+.message-text a{color:#e3bd70;text-decoration-color:#80602a}
+.message-text a:hover{color:#f5d99c;text-decoration-color:#e7bd68}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline-color:#d6a647}
+@media(max-width:760px){
+ .sidebar{box-shadow:0 0 0 100vmax #000c}
+ .icon-button{background:#211a0e;border-color:#49391e}
+}
