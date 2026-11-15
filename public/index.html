@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#050505"><title>CLYRO</title>
 <link rel="icon" type="image/svg+xml" href="/clyro-logo.svg">
-<link rel="stylesheet" href="/style.css?v=titanium-silver-2"><script src="/app.js?v=titanium-tiers-1" defer></script>
+<link rel="stylesheet" href="/style.css?v=clyro-aurora-3"><script src="/app.js?v=clyro-aurora-3" defer></script>
 </head>
 <body>
 <div id="authScreen" class="auth-screen">
@@ -24,7 +24,8 @@
   <aside id="sidebar" class="sidebar">
     <div class="brand"><img class="brand-logo" src="/clyro-logo.svg" alt="" aria-hidden="true"> CLYRO</div>
     <button id="newChat" class="new-chat">＋ Новый чат</button>
-    <div class="history-heading">ИСТОРИЯ ЧАТОВ</div>
+    <div class="history-heading">ТВОИ ПРОЕКТЫ</div>
+    <label class="chat-search-wrap"><span>⌕</span><input id="chatSearch" type="search" placeholder="Поиск по чатам..." autocomplete="off"></label>
     <div id="chatList" class="chat-list"></div>
     <div class="account">
       <div class="account-email" id="userEmail"></div>
@@ -41,18 +42,33 @@
         </button>
         <div id="modelMenu" class="model-menu hidden" role="menu" aria-label="Выбор версии CLYRO">
           <div class="model-menu-label">ВЫБЕРИ ВЕРСИЮ</div>
-          <button class="model-option" type="button" data-mode="velqi" role="menuitemradio" aria-checked="false"><span class="model-option-icon">V</span><span class="model-option-copy"><strong>Velqi</strong><small>Lite · быстрые ответы</small></span><span class="model-check">✓</span></button>
-          <button class="model-option selected" type="button" data-mode="nuvex" role="menuitemradio" aria-checked="true"><span class="model-option-icon">N</span><span class="model-option-copy"><strong>Nuvex</strong><small>Standard · универсальный режим</small></span><span class="model-check">✓</span></button>
-          <button class="model-option" type="button" data-mode="qorvex" role="menuitemradio" aria-checked="false"><span class="model-option-icon">Q</span><span class="model-option-copy"><strong>Qorvex</strong><small>Thinking · сложные задачи</small></span><span class="model-check">✓</span></button>
-          <button class="model-option" type="button" data-mode="zenvor" role="menuitemradio" aria-checked="false"><span class="model-option-icon">Z</span><span class="model-option-copy"><strong>Zenvor</strong><small>Pro · глубокий анализ</small></span><span class="model-check">✓</span></button>
-          <button class="model-option" type="button" data-mode="vaelix" role="menuitemradio" aria-checked="false"><span class="model-option-icon">V+</span><span class="model-option-copy"><strong>Vaelix</strong><small>Ultra · максимальный режим</small></span><span class="model-check">✓</span></button>
+          <button class="model-option" type="button" data-mode="velqi" role="menuitemradio" aria-checked="false">
+  <img class="model-option-art" src="/images/velqi.svg" alt="">
+  <span class="model-option-copy"><strong>Velqi</strong><small>Мгновенные ответы и простые задачи</small></span><span class="model-check">✓</span>
+ </button>
+          <button class="model-option selected" type="button" data-mode="nuvex" role="menuitemradio" aria-checked="true">
+  <img class="model-option-art" src="/images/nuvex.svg" alt="">
+  <span class="model-option-copy"><strong>Nuvex</strong><small>Баланс для повседневной работы</small></span><span class="model-check">✓</span>
+ </button>
+          <button class="model-option" type="button" data-mode="qorvex" role="menuitemradio" aria-checked="false">
+  <img class="model-option-art" src="/images/qorvex.svg" alt="">
+  <span class="model-option-copy"><strong>Qorvex</strong><small>Сложные задачи и логика</small></span><span class="model-check">✓</span>
+ </button>
+          <button class="model-option" type="button" data-mode="zenvor" role="menuitemradio" aria-checked="false">
+  <img class="model-option-art" src="/images/zenvor.svg" alt="">
+  <span class="model-option-copy"><strong>Zenvor</strong><small>Глубокий анализ и разработка</small></span><span class="model-check">✓</span>
+ </button>
+          <button class="model-option" type="button" data-mode="vaelix" role="menuitemradio" aria-checked="false">
+  <img class="model-option-art" src="/images/vaelix.svg" alt="">
+  <span class="model-option-copy"><strong>Vaelix</strong><small>Максимум возможностей и проверки</small></span><span class="model-check">✓</span>
+ </button>
         </div>
       </div>
-      <button id="settingsOpen" class="settings-open" type="button" aria-label="Настройки" title="Настройки">⚙</button>
+      <div class="topbar-actions"><button id="holidayToggle" class="holiday-toggle" type="button" aria-pressed="false" title="Новогодний режим">✦ <span>Новогодний режим</span></button><button id="settingsOpen" class="settings-open" type="button" aria-label="Настройки" title="Настройки">⚙</button></div>
       <div class="top-status"><i id="healthDot"></i><span id="healthText">Проверка</span></div>
     </header>
     <section id="messages" class="messages">
-      <div class="welcome"><div class="welcome-icon">P</div><h1>Чем могу помочь?</h1><p>Выбери режим и начни общение с CLYRO.</p></div>
+      <div class="welcome"><div class="welcome-icon">C</div><h1>Технологии. Без границ.</h1><p>Выбери свою версию CLYRO и начни создавать.</p></div>
     </section>
     <div class="composer-area">
       <form id="chatForm" class="composer">
