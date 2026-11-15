@@ -281,3 +281,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline-color:#d
  .limit-text{display:none}
  .send-button{width:40px;min-width:40px;height:40px;min-height:40px}
 }
+
+
+/* Generated images appear inline in the conversation */
+.generated-image{display:block;width:min(100%,720px);height:auto;max-height:78vh;object-fit:contain;margin:14px 0 2px;border:1px solid #594522;border-radius:14px;background:#111;box-shadow:0 12px 36px #0008}
