@@ -373,22 +373,15 @@ async function fetchSearchResultPage(url, allowedUrls) {
   return body.replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&#39;|&apos;/gi, "'").replace(/[ \t]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 12000);
 }
 const TEXT_PROVIDER_PLAN = [
-  {
-    id: "groq",
-    label: "Groq",
-    envKey: "GROQ_API_KEY",
-    url: "https://api.groq.com/openai/v1/chat/completions",
-    model: "openai/gpt-oss-120b",
-    contextWindow: 131072
-  }
+  { id: "cloudflare", label: "Cloudflare Workers AI", model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast", contextWindow: 24000 },
+  { id: "groq", label: "Groq", envKey: "GROQ_API_KEY", url: "https://api.groq.com/openai/v1/chat/completions", model: "openai/gpt-oss-120b", contextWindow: 131072 }
 ];
 
 function getTextProviderStatus(env) {
-  return [{
-    id: "groq",
-    name: "Groq",
-    configured: Boolean(env.GROQ_API_KEY)
-  }];
+  return [
+    { id: "cloudflare", name: "Cloudflare Workers AI", configured: Boolean(env.AI) },
+    { id: "groq", name: "Groq", configured: Boolean(env.GROQ_API_KEY) }
+  ];
 }
 
 function reasoningEffortFor(level) {
@@ -396,61 +389,70 @@ function reasoningEffortFor(level) {
 }
 
 async function callTextProvider(env, messages, maxTokens, tools = [], providerOrder = null, reasoningEffort = "medium", toolChoice = "auto") {
-  const provider = TEXT_PROVIDER_PLAN[0];
-  if (!env.GROQ_API_KEY) {
-    const failure = new Error("GROQ_API_KEY is not configured.");
-    failure.status = 503;
-    throw failure;
+  const order = Array.isArray(providerOrder) && providerOrder.length ? [...providerOrder, "cloudflare", "groq"] : ["cloudflare", "groq"];
+  const tried = new Set();
+  const failures = [];
+  for (const providerId of order) {
+    if (tried.has(providerId)) continue;
+    tried.add(providerId);
+    const provider = TEXT_PROVIDER_PLAN.find(item => item.id === providerId);
+    if (!provider) continue;
+    if (provider.id === "cloudflare") {
+      if (!env.AI) { failures.push("cloudflare:not_configured"); continue; }
+      try {
+        const result = await env.AI.run(provider.model, {
+          messages,
+          max_tokens: Math.min(maxTokens, 6000),
+          temperature: 0.6
+        });
+        const responseText = typeof result?.response === "string" ? result.response : "";
+        const toolCalls = Array.isArray(result?.tool_calls) ? result.tool_calls : [];
+        if (!responseText.trim() && !toolCalls.length) throw new Error("Empty Workers AI response");
+        const completion = {
+          model: provider.model,
+          choices: [{ message: { role: "assistant", content: responseText, tool_calls: toolCalls }, finish_reason: "stop" }],
+          usage: result?.usage || {}
+        };
+        return { completion, provider: provider.label, providerId: provider.id, model: provider.model, contextWindow: provider.contextWindow };
+      } catch (e) {
+        console.error("Cloudflare Workers AI request failed", e?.message || "unknown error");
+        failures.push("cloudflare:" + (e?.status || e?.name || "error"));
+      }
+      continue;
+    }
+    if (provider.id === "groq") {
+      if (!env.GROQ_API_KEY) { failures.push("groq:not_configured"); continue; }
+      try {
+        const payload = { model: provider.model, messages, max_completion_tokens: maxTokens, reasoning_effort: reasoningEffort, include_reasoning: false };
+        if (tools.length) { payload.tools = tools; payload.tool_choice = toolChoice; }
+        const response = await fetch(provider.url, {
+          method: "POST",
+          headers: { "Authorization": "Bearer " + env.GROQ_API_KEY, "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(25000)
+        });
+        if (!response.ok) {
+          const detail = await response.text().catch(() => "");
+          const failure = new Error("Groq API HTTP " + response.status + (detail ? ": " + detail.slice(0, 500) : ""));
+          failure.status = response.status;
+          throw failure;
+        }
+        const completion = await response.json();
+        const message = completion?.choices?.[0]?.message;
+        const hasText = typeof message?.content === "string" || (Array.isArray(message?.content) && message.content.some(part => typeof part?.text === "string"));
+        const hasTools = Array.isArray(message?.tool_calls) && message.tool_calls.length > 0;
+        if (!hasText && !hasTools) throw new Error("Groq returned an empty completion");
+        return { completion, provider: provider.label, providerId: provider.id, model: completion?.model || provider.model, contextWindow: provider.contextWindow };
+      } catch (e) {
+        console.error("Groq fallback request failed", e?.status || "unknown", e?.message || "unknown error");
+        failures.push("groq:" + (e?.status || e?.name || "error"));
+      }
+    }
   }
-
-  const payload = {
-    model: provider.model,
-    messages,
-    max_completion_tokens: maxTokens,
-    reasoning_effort: reasoningEffort,
-    include_reasoning: false
-  };
-  if (tools.length) {
-    payload.tools = tools;
-    payload.tool_choice = toolChoice;
-  }
-
-  const response = await fetch(provider.url, {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer " + env.GROQ_API_KEY,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(25000)
-  });
-
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    const failure = new Error("Groq API HTTP " + response.status + (detail ? ": " + detail.slice(0, 500) : ""));
-    failure.status = response.status;
-    failure.providerFailures = ["groq:" + response.status];
-    throw failure;
-  }
-
-  const completion = await response.json();
-  const message = completion?.choices?.[0]?.message;
-  const hasText = typeof message?.content === "string" ||
-    (Array.isArray(message?.content) && message.content.some(part => typeof part?.text === "string"));
-  const hasTools = Array.isArray(message?.tool_calls) && message.tool_calls.length > 0;
-  if (!hasText && !hasTools) {
-    const failure = new Error("Groq returned an empty completion.");
-    failure.status = 502;
-    throw failure;
-  }
-
-  return {
-    completion,
-    provider: provider.label,
-    providerId: provider.id,
-    model: completion?.model || provider.model,
-    contextWindow: provider.contextWindow
-  };
+  const failure = new Error("All text providers failed: " + failures.join(", "));
+  failure.status = failures.some(x => /:429$/.test(x)) ? 429 : failures.some(x => /:401$|:403$/.test(x)) ? 401 : 503;
+  failure.providerFailures = failures;
+  throw failure;
 }
 
 async function handleApi(request, env, path) {
@@ -761,12 +763,12 @@ async function handleApi(request, env, path) {
       });
     } catch (e) {
       const status = Number(e?.status || e?.statusCode || e?.response?.status || 0);
-      console.error(modelConfig.label + " Groq request failed", status || "unknown", e?.providerFailures || e?.name || "unknown error");
+      console.error(modelConfig.label + " text provider request failed", status || "unknown", e?.providerFailures || e?.name || "unknown error");
       if (status === 429) {
-        return error(modelConfig.label + " временно достиг лимита Groq. Подожди немного и попробуй снова. Код CL-203.", 429, "CL-203");
+        return error(modelConfig.label + " временно не может обработать запрос: все доступные провайдеры ограничили запросы. Попробуй позже. Код CL-203.", 429, "CL-203");
       }
       if (status === 401 || status === 403) {
-        return error("Ключ Groq не принят. Проверь секрет GROQ_API_KEY в Cloudflare. Код CL-202.", 503, "CL-202");
+        return error("Не удалось авторизовать резервный провайдер Groq. Проверь GROQ_API_KEY в Cloudflare. Код CL-202.", 503, "CL-202");
       }
       if (e?.name === "AbortError" || /timeout/i.test(e?.message || "")) {
         return error("Время ожидания ответа " + modelConfig.label + " истекло. Попробуй ещё раз. Код CL-205.", 504, "CL-205");
