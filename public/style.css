@@ -71,7 +71,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .settings-open{width:38px;min-width:38px;height:38px;min-height:38px;margin-left:auto;padding:0;border-color:transparent;background:transparent;color:#aaa;font-size:17px}
 .settings-open:hover{background:#171717;color:#fff;transform:rotate(20deg)}
 .top-status{display:flex;align-items:center;gap:7px;margin-left:0;color:#888;font-size:11px;white-space:nowrap}
-.top-status i{width:7px;height:7px;border-radius:50%;background:#b68a43}
+.top-status i{width:7px;height:7px;border-radius:50%;background:#aebdca}
 .top-status i.ok{background:#65b987}
 .top-status i.bad{background:#d76d6d}
 .messages{flex:1;min-height:0;overflow-y:auto;padding:22px 24px 30px;scroll-behavior:smooth}
@@ -190,8 +190,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
   --accent:#aebdca;
   --metal:#aebdca;
   --metal-bright:#dce5ec;
-  --line:#332b1d;
-  --line-soft:#242018;
+  --line:#2b3540;
+  --line-soft:#202a34;
 }
 body,.app,.main{background:radial-gradient(ellipse at 72% 38%,rgba(177,133,42,.075),transparent 36%),#090909}
 .sidebar{background:#0e0e0e;border-right-color:#29343f}
@@ -213,10 +213,10 @@ body,.app,.main{background:radial-gradient(ellipse at 72% 38%,rgba(177,133,42,.0
 .model-option-icon{border-color:#34414d}
 .model-check{color:#dce5ec}
 .mode-heading{color:#edf2f6}
-.picker-chevron,.provider-note{color:#948a78}
+.picker-chevron,.provider-note{color:#8e9aa6}
 .settings-open:hover{color:#dce5ec}
 .top-status i{background:#aebdca;box-shadow:0 0 10px #aebdca70}
-.messages{scrollbar-color:#493a20 transparent}
+.messages{scrollbar-color:#465461 transparent}
 .welcome-icon{background:linear-gradient(145deg,#303d49,#111820);border-color:#526271;color:#dce5ec;box-shadow:0 0 35px #9aabba1f}
 .welcome h1{color:#f2ede3}
 .message.user{background:#1b242d;border-color:#465461;color:#edf2f6}
@@ -233,27 +233,27 @@ body,.app,.main{background:radial-gradient(ellipse at 72% 38%,rgba(177,133,42,.0
 .account{border-top-color:#29343f}
 .auth-screen{background:radial-gradient(circle at 50% 38%,rgba(190,145,54,.11),transparent 34%),#090909}
 .auth-card{background:linear-gradient(145deg,#151c23,#0d1116);border-color:#34414d;box-shadow:0 24px 90px #0009,0 0 55px #9aabba10}
-.auth-tabs{border-color:#302b20;background:#0c0c0b}
-.auth-tabs button.active{background:#25323d;border-color:#6c5124;color:#e3ebf1}
-.field input,.dialog input,.memory-notes{background:#0b0b0a;border-color:#39352d}
+.auth-tabs{border-color:#2b3540;background:#0c0c0b}
+.auth-tabs button.active{background:#25323d;border-color:#465461;color:#e3ebf1}
+.field input,.dialog input,.memory-notes{background:#0b0b0a;border-color:#34414d}
 .field input:focus,.dialog input:focus,.memory-notes:focus{border-color:#aebdca}
-.dialog,.settings-dialog{background:#151411;border-color:#554322}
+.dialog,.settings-dialog{background:#141a21;border-color:#465461}
 .dialog::backdrop{background:#000b}
 .settings-section,.account{border-color:#29343f}
 .switch input:checked+span{background:#aebdca}
 .switch input:checked+span:before{background:#101820}
-.toast{background:#1b242d;border-color:#465461;color:#f0d49b}
+.toast{background:#1b242d;border-color:#465461;color:#dce5ec}
 .message-text a{color:#dce5ec;text-decoration-color:#718494}
 .message-text a:hover{color:#f0f5f8;text-decoration-color:#dce5ec}
 button:focus-visible,input:focus-visible,textarea:focus-visible{outline-color:#aebdca}
 @media(max-width:760px){
  .sidebar{box-shadow:0 0 0 100vmax #000c}
- .icon-button{background:#1b242d;border-color:#49391e}
+ .icon-button{background:#1b242d;border-color:#465461}
 }
 
 
 /* Thinking level selector — adapted from the updated Project AI concept */
-.composer{padding:15px 17px 13px;border-radius:25px;background:linear-gradient(135deg,#211e19,#151c23);border-color:#514027;box-shadow:0 16px 45px #0008,inset 0 1px 0 #ffffff0c}
+.composer{padding:15px 17px 13px;border-radius:25px;background:linear-gradient(135deg,#1b242d,#151c23);border-color:#465461;box-shadow:0 16px 45px #0008,inset 0 1px 0 #ffffff0c}
 .composer:focus-within{border-color:#91a4b5;box-shadow:0 0 0 3px #aebdca16,0 16px 45px #0008}
 .composer textarea{font-size:15px;min-height:46px}
 .composer-bottom{align-items:flex-end}
@@ -261,7 +261,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline-color:#a
 .thinking-control{display:grid;gap:6px;min-width:min(300px,62vw)}
 .thinking-label{display:flex;justify-content:space-between;align-items:center;padding:0 5px;color:#9eacb8;font-size:9px;font-weight:750;letter-spacing:1.05px}
 .thinking-label strong{color:#e0e8ee;font-size:11px;letter-spacing:0}
-.thinking-options{display:flex;align-items:center;gap:3px;padding:4px;border:1px solid #4a4134;border-radius:24px;background:#11110f}
+.thinking-options{display:flex;align-items:center;gap:3px;padding:4px;border:1px solid #465461;border-radius:24px;background:#11110f}
 .thinking-option{flex:1;min-height:34px;padding:0 8px;border:1px solid transparent;border-radius:18px;background:transparent;color:#888174;font-size:10px;font-weight:650;white-space:nowrap}
 .thinking-option:hover{background:#1b242d;border-color:#465461;color:#dce5ec}
 .thinking-option.active{border-color:#718494;background:linear-gradient(135deg,#dce5ec,#8294a3);color:#101820;box-shadow:0 2px 10px #aebdca30}
@@ -287,14 +287,14 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline-color:#a
 .generated-image{display:block;width:min(100%,720px);height:auto;max-height:78vh;object-fit:contain;margin:14px 0 2px;border:1px solid #465461;border-radius:14px;background:#111;box-shadow:0 12px 36px #0008}
 
 /* CLYRO brand */
-.brand{gap:9px;color:#f2d38b;letter-spacing:.02em}
+.brand{gap:9px;color:#dce5ec;letter-spacing:.02em}
 .brand span{color:#c1ced9}
 .brand-logo{width:29px;height:29px;object-fit:contain;flex:0 0 auto;filter:drop-shadow(0 0 7px rgba(215,173,89,.18))}
 .auth-brand .brand-logo{width:42px;height:42px}
 .auth-brand{font-size:25px}
 .welcome-icon{background:transparent!important;color:transparent!important;background-image:url('/clyro-logo.svg')!important;background-position:center!important;background-size:contain!important;background-repeat:no-repeat!important;border:0!important;box-shadow:none!important}
 
-.token-meter{display:block;margin-top:5px;color:#9b907e;font-size:10px;line-height:1.3;letter-spacing:.1px}
+.token-meter{display:block;margin-top:5px;color:#8e9aa6;font-size:10px;line-height:1.3;letter-spacing:.1px}
 @media(max-width:760px){.limit-text{display:block!important;max-width:190px;font-size:9px;text-align:left}.composer-left{min-width:0}}
 
 
