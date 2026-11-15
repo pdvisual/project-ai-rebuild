@@ -465,3 +465,79 @@ button:hover{
 .toast{background:#1b242d;border-color:#526271;color:#e3ebf1}
 .settings-open:hover,.chat-actions button:hover{color:#dce5ec}
 button:focus-visible,input:focus-visible,textarea:focus-visible{outline-color:#aebdca}
+
+
+/* CLYRO AURORA — titanium interface redesign */
+:root{--bg:#080d12;--surface:#0e151c;--surface-2:#141e27;--surface-3:#1b2934;--line:#2b3b49;--line-soft:#1c2a35;--text:#edf3f7;--muted:#91a1af;--muted-2:#b9c6d0;--accent:#dce5ec}
+body{background:#080d12 url("https://bgfons.com/uploads/titanium/titanium_texture1747.jpg") center/cover fixed;color:#edf3f7}
+body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(120deg,rgba(4,8,12,.96),rgba(7,13,19,.9) 45%,rgba(4,8,12,.96))}
+.app{background:linear-gradient(135deg,rgba(7,12,17,.96),rgba(9,15,21,.91))}
+.sidebar{background:rgba(8,14,20,.94);border-right:1px solid #293a48;backdrop-filter:blur(24px)}
+.brand{letter-spacing:2px;font-size:18px}.brand-logo{filter:drop-shadow(0 0 12px rgba(190,210,225,.22))}
+.new-chat,.primary,.send-button{background:linear-gradient(135deg,#dce5ec,#8799a8);color:#0a1118;border:1px solid #d8e2ea;font-weight:750;box-shadow:0 8px 28px rgba(120,148,169,.12)}
+.new-chat:hover,.primary:hover,.send-button:hover{background:linear-gradient(135deg,#fff,#aebdca);color:#080d12}
+.topbar{background:rgba(8,14,20,.82);border-bottom:1px solid #263744;backdrop-filter:blur(22px)}
+.model-picker{background:rgba(20,30,39,.85);border-color:#405362;border-radius:14px;min-width:190px}
+.model-heading{font-weight:750}.provider-note{letter-spacing:1.4px}
+.model-menu{background:rgba(12,19,26,.98);border:1px solid #3b4e5d;box-shadow:0 25px 80px #000b;backdrop-filter:blur(22px);border-radius:18px}
+.model-option{border-radius:13px}.model-option-art{width:42px;height:42px;object-fit:cover;border-radius:11px;border:1px solid #526575}
+.model-option.selected{background:linear-gradient(100deg,#253542,#18232d);border-color:#7e93a4}
+.topbar-actions{display:flex;align-items:center;gap:9px;margin-left:auto}
+.holiday-toggle{border-radius:999px;background:#121b23;border-color:#394b59;color:#d8e4ec;font-size:12px;min-height:36px;padding:0 12px}
+.holiday-toggle.active{background:linear-gradient(120deg,#253b37,#1b302b);border-color:#8aa99a;color:#e4f1e9}
+.settings-open{border-radius:50%;width:38px;height:38px}
+.messages{padding:30px 22px 38px;scrollbar-color:#415260 transparent}
+.welcome-shell{width:min(1060px,100%);margin:0 auto;padding:4px 0 32px}
+.welcome-hero{position:relative;overflow:hidden;min-height:245px;border:1px solid #465866;border-radius:24px;padding:30px 34px;background:linear-gradient(112deg,rgba(14,23,31,.98),rgba(19,31,41,.91) 55%,rgba(8,14,20,.92)),url("https://bgfons.com/uploads/titanium/titanium_texture1748.jpg") center/cover;box-shadow:0 25px 80px #0006}
+.welcome-hero:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 55%,rgba(191,211,226,.08));pointer-events:none}
+.hero-eyebrow,.hero-foot,.section-heading>span,.section-heading small,.mode-card-meta{font-size:10px;letter-spacing:2px;color:#91a4b4;font-weight:750}
+.hero-eyebrow{display:flex;align-items:center;gap:9px}.status-pip{width:7px;height:7px;border-radius:50%;background:#b8cad6;box-shadow:0 0 14px #b8cad6}
+.hero-copy{position:relative;z-index:1;margin-top:28px;max-width:520px}
+.hero-copy h1{font-size:clamp(34px,5vw,58px);line-height:.99;letter-spacing:-2.8px;margin:0 0 14px;font-weight:760}
+.hero-copy h1 span{background:linear-gradient(90deg,#fff,#9aabba);background-clip:text;color:transparent}
+.hero-copy p{color:#a8b7c2;max-width:410px;line-height:1.6;margin:0;font-size:14px}
+.hero-emblem{position:absolute;right:7%;top:50%;transform:translateY(-50%);width:210px;height:210px;display:grid;place-items:center;opacity:.88}
+.hero-emblem img{width:100%;height:100%;filter:drop-shadow(0 0 30px rgba(174,196,211,.22))}
+.hero-foot{position:absolute;bottom:18px;left:34px;right:34px;display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.5px;color:#738796}
+.section-heading{display:flex;align-items:end;justify-content:space-between;margin:32px 2px 14px}
+.section-heading h2{margin:5px 0 0;font-size:21px;letter-spacing:-.6px}
+.mode-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.mode-card{position:relative;display:flex;flex-direction:column;align-items:flex-start;text-align:left;white-space:normal;min-width:0;min-height:225px;padding:0 13px 14px;overflow:hidden;border-radius:17px;border:1px solid #2d3e4b;background:linear-gradient(160deg,#15212b,#0d151d);transition:transform .2s,border-color .2s,box-shadow .2s}
+.mode-card:hover{transform:translateY(-4px);border-color:#8298a9;box-shadow:0 14px 34px #0007}
+.mode-card.active{border-color:#a9bbc9;background:linear-gradient(160deg,#1e303d,#111b24);box-shadow:inset 0 0 0 1px #8298a944,0 10px 35px #0005}
+.mode-card img{width:calc(100% + 26px);height:106px;object-fit:cover;margin:0 -13px 12px;opacity:.93}
+.mode-card-meta{font-size:8px;letter-spacing:1.5px}
+.mode-card strong{font-size:17px;margin-top:5px}
+.mode-card small{font-size:10px;color:#9aaab6;line-height:1.4;margin-top:5px;min-height:29px}
+.mode-card-cta{font-size:10px;color:#c4d1da;margin-top:auto;padding-top:10px}
+.mode-card.featured{border-color:#718798}
+.prompt-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.prompt-grid button{white-space:normal;text-align:left;justify-content:flex-start;min-height:66px;padding:10px 12px;background:rgba(18,28,37,.86);border-color:#2e414f;border-radius:13px;color:#c5d1da;font-size:20px}
+.prompt-grid button:hover{border-color:#718899;background:#1b2a35}
+.prompt-grid button span{display:flex;flex-direction:column;gap:3px}.prompt-grid b{font-size:11px;color:#e8eef2}.prompt-grid small{font-size:10px;color:#91a2af}
+.welcome-note{font-size:10px;color:#758692;text-align:center;margin:24px 0 0}
+.composer-area{background:linear-gradient(0deg,#080d12 70%,rgba(8,13,18,.84));padding:14px 22px 12px}
+.composer{max-width:1000px;border:1px solid #405362;border-radius:20px;background:rgba(15,24,32,.96);box-shadow:0 15px 55px #0008}
+.composer textarea{color:#eef4f7}
+.send-button{border-radius:12px}
+.thinking-option.active{background:linear-gradient(135deg,#dce5ec,#8799a8);color:#0b1117;border-color:#dce5ec}
+.message{max-width:920px}.message.assistant:before{background:#1c2a35;border-color:#526676;color:#e1eaf0}
+.message-tools{display:flex;gap:8px;margin-top:10px}.message-tools button{min-height:28px;padding:0 9px;border-radius:8px;background:transparent;color:#8fa2b0;font-size:10px}
+.chat-search-wrap{display:flex;align-items:center;gap:8px;margin:10px 0 16px;padding:0 11px;height:38px;border:1px solid #2b3b48;border-radius:11px;background:#101922;color:#8fa1af}
+.chat-search-wrap span{font-size:21px}.chat-search-wrap input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#edf3f7;font-size:12px}
+.chat-row.active .chat-open{background:#1a2a35;border-color:#536a7b;color:#eef4f7}
+.top-status i{background:#9bb0bf}
+.dialog{background:#101922;border:1px solid #405260;color:#edf3f7}
+.auth-screen{background:radial-gradient(ellipse at 50% 20%,rgba(130,153,173,.12),transparent 42%),linear-gradient(145deg,#090d12,#05070a 70%)}
+.auth-card{background:linear-gradient(145deg,#151f28,#0d141b);border-color:#40515f}
+.toast{background:#18242e;border-color:#506575;color:#e4edf3}
+body.new-year{--accent:#dce5ec}
+body.new-year:after{content:"";pointer-events:none;position:fixed;inset:0;z-index:50;opacity:.42;background-image:radial-gradient(2px 2px at 20px 30px,#fff 98%,transparent),radial-gradient(1.5px 1.5px at 70px 90px,#dcebf4 98%,transparent),radial-gradient(2px 2px at 140px 160px,#fff 98%,transparent),radial-gradient(1px 1px at 190px 50px,#fff 98%,transparent);background-size:220px 220px;animation:snowfall 16s linear infinite}
+body.new-year .welcome-hero{background:linear-gradient(112deg,rgba(11,24,23,.97),rgba(16,37,33,.91) 55%,rgba(8,14,20,.92)),url("https://bgfons.com/uploads/titanium/titanium_texture1748.jpg") center/cover;border-color:#587b70}
+body.new-year .hero-eyebrow .status-pip{background:#9bc6ae;box-shadow:0 0 14px #9bc6ae}
+body.new-year .holiday-toggle.active{background:linear-gradient(120deg,#244c3d,#183329);border-color:#83b39c}
+body.new-year .mode-card.active{border-color:#82ad98}
+@keyframes snowfall{from{background-position:0 -220px,0 -110px,0 -80px,0 -170px}to{background-position:0 440px,0 330px,0 360px,0 270px}}
+@media(max-width:900px){.mode-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.hero-emblem{right:2%;width:165px;height:165px;opacity:.55}.prompt-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.topbar-actions{gap:5px}.holiday-toggle{width:38px;padding:0;font-size:16px}.holiday-toggle span{display:none}.messages{padding:18px 12px 28px}.welcome-hero{min-height:240px;padding:22px 20px}.hero-copy{margin-top:30px}.hero-copy h1{font-size:40px}.hero-copy p{max-width:260px;font-size:12px}.hero-emblem{width:118px;height:118px;right:-4px;top:45%;opacity:.3}.hero-foot{left:20px;right:20px;bottom:14px;font-size:7px}.mode-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.mode-card{min-height:210px;padding:0 10px 12px}.mode-card img{width:calc(100% + 20px);margin-left:-10px;margin-right:-10px;height:94px}.mode-card small{font-size:9px}.section-heading{margin-top:25px}.section-heading h2{font-size:18px}.prompt-grid{gap:7px}.prompt-grid button{min-height:62px;padding:8px;font-size:17px}.prompt-grid b{font-size:10px}.composer-area{padding:10px 10px 8px}.thinking-options{flex-wrap:wrap}.top-status{display:none}}
+@media(prefers-reduced-motion:reduce){body.new-year:after{animation:none}}
