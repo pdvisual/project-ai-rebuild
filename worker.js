@@ -666,7 +666,7 @@ async function handleApi(request, env, path) {
         const prepRoute = await callTextProvider(env, [
           { role: "system", content: systemPrompt + "\n\nПОДГОТОВИТЕЛЬНЫЙ ЭТАП: не давай пользователю ответ. Составь краткую рабочую записку: цель задачи, важные исходные данные, допущения и что нужно проверить. Не раскрывай скрытую цепочку рассуждений." },
           { role: "user", content: currentMessageContent }
-        ], prepTokens, [], ["groq"], reasoningEffortFor(thinkingLevel));
+        ], prepTokens, [], ["cloudflare", "groq"], reasoningEffortFor(thinkingLevel));
         lastRoute = prepRoute;
         const prep = prepRoute.completion;
         const prepText = typeof prep?.choices?.[0]?.message?.content === "string" ? prep.choices[0].message.content : "";
@@ -676,7 +676,7 @@ async function handleApi(request, env, path) {
       // The model autonomously decides whether the user's request needs live web search.
       lastRoute = await callTextProvider(env, finalRequestMessages,
         Math.min(modelConfig.maxTokens, ({ low: 1000, medium: 1600, high: 2600, super_high: 6000 })[thinkingLevel]),
-        webTools, ["groq"], reasoningEffortFor(thinkingLevel), webToolChoice);
+        webTools, ["cloudflare", "groq"], reasoningEffortFor(thinkingLevel), webToolChoice);
       completion = lastRoute.completion;
       if (deepThinking && thinkingLevel === "super_high") {
         const draftMessage = completion?.choices?.[0]?.message;
@@ -690,7 +690,7 @@ async function handleApi(request, env, path) {
             { role: "system", content: systemPrompt + "\n\nФИНАЛЬНАЯ НЕЗАВИСИМАЯ ПРОВЕРКА: перед тобой черновик ответа. Проверь фактическую точность, логику, полноту, противоречия и крайние случаи. Исправь обнаруженные проблемы и верни только готовый ответ пользователю. Не перечисляй скрытые рассуждения. Не добавляй факты, которых нет в исходных данных. Если использовался веб-поиск, не приписывай источникам то, чего в них нет, и сохрани уместные URL." },
             { role: "user", content: currentMessageContent },
             { role: "assistant", content: draftText }
-          ], Math.min(OSMIUM.maxTokens, 6000), webTools, ["groq"], reasoningEffortFor(thinkingLevel), webToolChoice);
+          ], Math.min(OSMIUM.maxTokens, 6000), webTools, ["cloudflare", "groq"], reasoningEffortFor(thinkingLevel), webToolChoice);
           completion = lastRoute.completion;
         }
       }
